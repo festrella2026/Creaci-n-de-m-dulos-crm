@@ -319,9 +319,13 @@ class Vtiger_Tools_Console_ModuleController extends Vtiger_Tools_Console_Control
 	protected function createFiles(Vtiger_Module $module, Vtiger_Field $entityField) {
 		$targetpath = 'modules/' . $module->name;
 
-		if (!is_file($targetpath)) {
-			mkdir($targetpath);
-			mkdir($targetpath . '/language');
+		if (!is_dir($targetpath)) {
+			if (!mkdir($targetpath, 0755, true)) {
+				throw new Exception("Unable to create module directory: $targetpath");
+			}
+			if (!mkdir($targetpath . '/language', 0755, true)) {
+				throw new Exception("Unable to create module language directory: $targetpath/language");
+			}
 
 			$templatepath = 'vtlib/ModuleDir/6.0.0';
 
