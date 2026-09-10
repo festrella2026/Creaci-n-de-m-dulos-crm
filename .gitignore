@@ -1,0 +1,36 @@
+# Repositorio Git anterior
+.git_old/
+
+# Configuración local / sensible
+config.inc.php
+config.db.php
+config.csrf-secret.php
+config_override.dev.php
+
+# Backups
+*.backup
+*.bak
+*.old
+
+# Logs y temporales
+logs/
+cache/
+storage/
+tmp/
+
+# Datos generados por usuarios
+user_privileges/
+
+# Dependencias
+vendor/
+
+# IDE / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Otros archivos locales
+.gitignore.vtiger.backup
+config.inc.php.backup-php84
+*.backup-*

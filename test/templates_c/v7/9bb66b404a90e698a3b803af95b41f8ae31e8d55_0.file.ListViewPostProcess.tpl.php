@@ -1,0 +1,28 @@
+<?php
+/* Smarty version 4.5.5, created on 2026-03-20 13:06:47
+  from '/var/www/html/vtigercrm/layouts/v7/modules/Vtiger/ListViewPostProcess.tpl' */
+
+/* @var Smarty_Internal_Template $_smarty_tpl */
+if ($_smarty_tpl->_decodeProperties($_smarty_tpl, array (
+  'version' => '4.5.5',
+  'unifunc' => 'content_69bd46676ef3d9_89082677',
+  'has_nocache_code' => false,
+  'file_dependency' => 
+  array (
+    '9bb66b404a90e698a3b803af95b41f8ae31e8d55' => 
+    array (
+      0 => '/var/www/html/vtigercrm/layouts/v7/modules/Vtiger/ListViewPostProcess.tpl',
+      1 => 1752039682,
+      2 => 'file',
+    ),
+  ),
+  'includes' => 
+  array (
+  ),
+),false)) {
+function content_69bd46676ef3d9_89082677 (Smarty_Internal_Template $_smarty_tpl) {
+?>	</div>
+</div>
+
+<?php }
+}

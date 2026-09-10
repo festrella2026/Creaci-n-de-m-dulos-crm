@@ -1,0 +1,20 @@
+<?php
+$languageStrings = array(
+'Solicitud de Factura'	=>	'Solicitud de Factura',
+'Facturada'	=>	'Facturada',
+'Pagada'	=>	'Pagada',
+'Documentación'	=>	'Documentación',
+'Solicitud de envío'	=>	'Solicitud de envío',
+'Equipos Enviados'	=>	'Equipos Enviados',
+'Registro de Venta'	=>	'Registro de Venta',
+'Solicitud de Cobro'	=>	'Solicitud de Cobro',
+'Cobro Generado'	=>	'Cobro Generado',
+'Servientrega'	=>	'Servientrega',
+'Flota Imbabura'	=>	'Flota Imbabura',
+'Flota bus interprovincial'	=>	'Flota bus interprovincial',
+'Accesorios'	=>	'Accesorios',
+'Solicitud anulación Factura'	=>	'Solicitud anulación Factura',
+'Factura anulada'	=>	'Factura anulada',
+'Abono realizado'	=>	'Abono realizado',
+'Error Contacto'	=>	'Error Contacto',
+);

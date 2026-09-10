@@ -1,0 +1,380 @@
+<?php
+/*+**********************************************************************************
+ * The contents of this file are subject to the vtiger CRM Public License Version 1.0
+ * ("License"); You may not use this file except in compliance with the License
+ * The Original Code is:  vtiger CRM Open Source
+ * The Initial Developer of the Original Code is vtiger.
+ * Portions created by vtiger are Copyright (C) vtiger.
+ * All Rights Reserved.
+ ************************************************************************************/
+
+include_once dirname(__FILE__) . '/../viewers/ContentViewer.php';
+
+class Vtiger_PDF_InventoryContentViewer extends Vtiger_PDF_ContentViewer
+{
+	protected $headerRowHeight = 8;
+	protected $onSummaryPage = false;
+
+	// NUEVO: Mapeo de labels personalizados
+	protected $labelMapping = array(
+		// Encabezados de columnas
+		'Code' => 'Código',
+		'Name' => 'Detalle',
+		'Quantity' => 'Cantidad',
+		'Price' => 'Precio',
+		'Discount' => 'Descuento',
+		'Tax' => 'IVA',
+		'Total' => 'Total',
+	);
+
+	// NUEVO: Claves de summary a excluir (ej: array('Total', 'Subtotal'))
+	protected $excludeSummaryKeys = array(
+		'Cargos por envío y manejo',
+		'Ajuste',
+		'Impuesto por envío y manejo'
+	);
+	
+	function __construct()
+	{
+		// NOTE: General A4 PDF width ~ 189 (excluding margins on either side)
+
+		$this->cells = array( // Name => Width
+			'Code' => 30,
+			'Name' => 55,
+			'Quantity' => 20,
+			'Price' => 20,
+			'Discount' => 19,
+			'Tax' => 16,
+			'Total' => 30
+		);
+	}
+
+	// NUEVO MÉTODO: Establece las claves de summary a excluir del PDF (ej: setExcludeSummaryKeys(array('Total', 'Subtotal')))
+	public function setExcludeSummaryKeys($keys)
+	{
+		$this->excludeSummaryKeys = $keys;
+	}
+
+	// NUEVO MÉTODO: Obtiene las claves de summary filtradas según las exclusiones establecidas
+	protected function getFilteredSummaryKeys()
+	{
+		$allKeys = $this->contentSummaryModel->keys();
+
+		if (empty($this->excludeSummaryKeys)) {
+			return $allKeys;
+		}
+
+		$filteredKeys = array();
+
+		foreach ($allKeys as $key) {
+			$exclude = false;
+
+			foreach ($this->excludeSummaryKeys as $excludePattern) {
+				// Comparación flexible (no sensible a mayúsculas)
+				if (stripos($key, $excludePattern) !== false) {
+					$exclude = true;
+					break;
+				}
+			}
+
+			if (!$exclude) {
+				$filteredKeys[] = $key;
+			}
+		}
+
+		return $filteredKeys;
+	}
+
+	// NUEVO MÉTODO: Permite establecer un mapeo de labels personalizados para el PDF (ej: setLabelMapping(array('Total' => 'Total General', 'Discount' => 'Descuento Total')))
+	public function setLabelMapping($mapping)
+	{
+		$this->labelMapping = array_merge($this->labelMapping, $mapping);
+	}
+
+	// NUEVO MÉTODO: Obtiene el label mapeado para un label original dado, aplicando una lógica de prioridad para encontrar la mejor coincidencia.
+	// El método sigue el siguiente orden de prioridad:
+	// 1. Mapeo directo (case-sensitive)
+	// 2. Regex dinámico para patrones comunes (total neto, descuento con %, impuesto con %, envío, adjustment, total general, grand total)
+	// 3. labelModel
+	// 4. Retorna el label original si no se encuentra ningún mapeo	
+
+	protected function getMappedLabel($originalLabel)
+	{
+		// 1. Verificar mapeo directo (case-sensitive)
+		$normalized = strtolower(trim($originalLabel));
+
+		if (isset($this->labelMapping[$originalLabel])) {
+			return $this->labelMapping[$originalLabel];
+		}
+		// 2. Regex dinámico 
+		$patterns = [
+			// total neto → Subtotal
+			'/^total neto$/i' => 'Subtotal',
+
+			// descuento(10.00%) → Descuento(10.00%)
+			'/^descuento\s*\(([\d\.]+)%\)/i' => 'Descuento($1%)',
+
+			// Discount (10%) → Descuento (10%)
+			'/^discount\s*\(([\d\.]+)%\)/i' => 'Descuento($1%)',
+
+			// impuesto:(15%) → IVA:(15%)
+			'/^impuesto:\s*\(([\d\.]+)%\)/i' => 'IVA:($1%)',
+
+			// Tax:(15%) → IVA:(15%)
+			'/^tax:\s*\(([\d\.]+)%\)/i' => 'IVA:($1%)',
+
+			// Envío y dirección fiscal:(27%) → Impuesto por Envío:(27%)
+			'/^env[ií]o.*:\s*\(([\d\.]+)%\)/i' => 'Impuesto por Envío:($1%)',
+
+			// Enviando y cargas → Cargo por Envío
+			'/^enviando y cargas$/i' => 'Cargo por envío',
+
+			// Adjustment → Ajuste
+			'/^adjustment$/i' => 'Ajuste',
+
+			// Ajuste → Ajuste (por consistencia)
+			'/^ajuste$/i' => 'Ajuste',
+
+			// total general:(in $) → Total:(in $)
+			'/^gran total:\s*\(in .*?\)/i' => 'Total:(in $)',
+
+			// Grand Total → Total General
+			'/^grand total:/i' => 'Total General:',
+		];
+		// Se itera sobre los patrones para encontrar una coincidencia y aplicar el reemplazo dinámico
+		foreach ($patterns as $pattern => $replacement) {
+			if (preg_match($pattern, $originalLabel)) {
+				return preg_replace($pattern, $replacement, $originalLabel);
+			}
+		}
+		// 3. labelModel
+		if ($this->labelModel) {
+			$mappedLabel = $this->labelModel->get($originalLabel, $originalLabel);
+			if ($mappedLabel != $originalLabel) {
+				return $mappedLabel;
+			}
+		}
+		return $originalLabel;
+	}
+
+	function initDisplay($parent)
+	{
+
+		$pdf = $parent->getPDF();
+		$contentFrame = $parent->getContentFrame();
+		// Se ajusta la posición Y del contentFrame para evitar solapamientos con el header y para dejar un espacio visual adecuado entre el header y el inicio del contenido.
+		$globalOffsetY = -30; // ajusta este valor
+		$contentFrame->y += $globalOffsetY;
+
+		$pdf->MultiCell($contentFrame->w, $contentFrame->h, "", 1, 'L', 0, 1, $contentFrame->x, $contentFrame->y);
+
+		// Defer drawing the cell border later.
+		if (!$parent->onLastPage()) {
+			$this->displayWatermark($parent);
+		}
+
+		// ============================================
+		// SECCIÓN MODIFICADA: DIBUJAR ENCABEZADO CON MAPEO
+		// ============================================
+		// Header	
+		$offsetX = 0;
+		$pdf->SetFont('', 'B');
+
+		foreach ($this->cells as $cellName => $cellWidth) {
+			// NUEVO: Usar el método getMappedLabel para obtener el label
+			$cellLabel = $this->getMappedLabel($cellName);
+
+			$pdf->MultiCell($cellWidth, $this->headerRowHeight, $cellLabel, 1, 'L', 0, 1, $contentFrame->x + $offsetX, $contentFrame->y);
+			$offsetX += $cellWidth;
+		}
+		$pdf->SetFont('', '');
+		// Reset the y to use
+		$contentFrame->y += $this->headerRowHeight;
+	}
+
+	function drawCellBorder($parent, $cellHeights = False)
+	{
+		$pdf = $parent->getPDF();
+		$contentFrame = $parent->getContentFrame();
+
+		if (empty($cellHeights))
+			$cellHeights = array();
+
+		$offsetX = 0;
+		foreach ($this->cells as $cellName => $cellWidth) {
+			$cellHeight = isset($cellHeights[$cellName]) ? $cellHeights[$cellName] : $contentFrame->h;
+
+			$offsetY = $contentFrame->y - $this->headerRowHeight;
+
+			$pdf->MultiCell($cellWidth, $cellHeight, "", 1, 'L', 0, 1, $contentFrame->x + $offsetX, $offsetY);
+			$offsetX += $cellWidth;
+		}
+	}
+
+	function display($parent)
+	{
+		$this->displayPreLastPage($parent);
+		$this->displayLastPage($parent);
+	}
+
+	function displayPreLastPage($parent)
+	{
+
+		$models = $this->contentModels;
+
+		$totalModels = php7_count($models);
+		$pdf = $parent->getPDF();
+
+		$parent->createPage();
+		$contentFrame = $parent->getContentFrame();
+
+		$contentLineX = $contentFrame->x;
+		$contentLineY = $contentFrame->y;
+		$overflowOffsetH = 8; // This is offset used to detect overflow to next page
+
+		for ($index = 0; $index < $totalModels; ++$index) {
+			$model = $models[$index];
+
+			$contentHeight = 1;
+
+			// Determine the content height to use
+			foreach ($this->cells as $cellName => $cellWidth) {
+				$contentString = $model->get($cellName);
+				if (empty($contentString))
+					continue;
+				$contentStringHeight = $pdf->GetStringHeight($contentString, $cellWidth);
+				if ($contentStringHeight > $contentHeight)
+					$contentHeight = $contentStringHeight;
+			}
+
+			// Are we overshooting the height?
+			if (ceil($contentLineY + $contentHeight) > ceil($contentFrame->h + $contentFrame->y)) {
+
+				$this->drawCellBorder($parent);
+				$parent->createPage();
+
+				$contentFrame = $parent->getContentFrame();
+				$contentLineX = $contentFrame->x;
+				$contentLineY = $contentFrame->y;
+			}
+
+			$offsetX = 0;
+			foreach ($this->cells as $cellName => $cellWidth) {
+				$pdf->MultiCell($cellWidth, $contentHeight, $model->get($cellName), 0, 'L', 0, 1, $contentLineX + $offsetX, $contentLineY);
+				$offsetX += $cellWidth;
+			}
+
+			$contentLineY = $pdf->GetY();
+
+			$commentContent = $model->get('Comment');
+
+			if (!empty($commentContent)) {
+				$commentCellWidth = $this->cells['Name'];
+				$offsetX = $this->cells['Code'];
+
+				$contentHeight = $pdf->GetStringHeight($commentContent, $commentCellWidth);
+				if (ceil($contentLineY + $contentHeight + $overflowOffsetH) > ceil($contentFrame->h + $contentFrame->y)) {
+
+					$this->drawCellBorder($parent);
+					$parent->createPage();
+
+					$contentFrame = $parent->getContentFrame();
+					$contentLineX = $contentFrame->x;
+					$contentLineY = $contentFrame->y;
+				}// Se dibuja el comentario debajo del detalle del producto, con un pequeño espacio de separación.
+				$pdf->MultiCell(
+					$commentCellWidth,
+					$contentHeight,
+					$model->get('Comment'),
+					0,
+					'L',
+					0,
+					1,
+					$contentLineX + $offsetX,
+					$contentLineY -10
+				);
+				// Se actualiza la posición Y para el siguiente item, considerando la altura del comentario y un espacio adicional para evitar solapamientos.
+				$contentLineY = $pdf->GetY()+2;
+			}
+		}
+
+		// Summary
+		// Se establece un mapeo de labels personalizados para las celdas de resumen
+		$cellHeights = array();
+
+		if ($this->contentSummaryModel) {
+			//Aqui se obtienen las claves de summary que no están excluidas para calcular el espacio necesario y evitar que se dibujen sobre los items de la última página.
+			$summaryCellKeys = $this->getFilteredSummaryKeys();
+			$summaryCellCount = php7_count($summaryCellKeys);
+
+			$summaryCellLabelWidth = $this->cells['Quantity'] + $this->cells['Price'] + $this->cells['Discount'] + $this->cells['Tax'];
+			$summaryCellHeight = $pdf->GetStringHeight("TEST", $summaryCellLabelWidth); // Pre-calculate cell height
+
+			$summaryTotalHeight = ceil(($summaryCellHeight * $summaryCellCount));
+
+			if (($contentFrame->h + $contentFrame->y) - ($contentLineY + $overflowOffsetH) < $summaryTotalHeight) { //$overflowOffsetH is added so that last Line Item is not overlapping
+				$this->drawCellBorder($parent);
+				$parent->createPage();
+
+				$contentFrame = $parent->getContentFrame();
+				$contentLineX = $contentFrame->x;
+				$contentLineY = $contentFrame->y;
+			}
+
+			$summaryLineX = $contentLineX + $this->cells['Code'] + $this->cells['Name'];
+			$summaryLineY = ($contentFrame->h + $contentFrame->y - $this->headerRowHeight) - $summaryTotalHeight;
+
+			foreach ($summaryCellKeys as $key) {
+				//Se utiliza el método getMappedLabel para mostrar las etiquetas personalizadas en el PDF.
+				$mappedKey = $this->getMappedLabel($key);
+				$pdf->MultiCell($summaryCellLabelWidth, $summaryCellHeight, $mappedKey, 1, 'L', 0, 1, $summaryLineX, $summaryLineY);
+				$pdf->MultiCell(
+					$contentFrame->w - $summaryLineX + 10 - $summaryCellLabelWidth,
+					$summaryCellHeight,
+					$this->contentSummaryModel->get($key),
+					1,
+					'R',
+					0,
+					1,
+					$summaryLineX + $summaryCellLabelWidth,
+					$summaryLineY
+				);
+				$summaryLineY = $pdf->GetY();
+			}
+
+			$cellIndex = 0;
+			foreach ($this->cells as $cellName => $cellWidth) {
+				if ($cellIndex < 2)
+					$cellHeights[$cellName] = $contentFrame->h;
+				else
+					$cellHeights[$cellName] = $contentFrame->h - $summaryTotalHeight;
+				++$cellIndex;
+			}
+		}
+		$this->onSummaryPage = true;
+		$this->drawCellBorder($parent, $cellHeights);
+	}
+
+	function displayLastPage($parent)
+	{
+		// Add last page to take care of footer display
+		if ($parent->createLastPage()) {
+			$this->onSummaryPage = false;
+		}
+	}
+
+	function drawStatusWaterMark($parent)
+	{
+		$pdf = $parent->getPDF();
+
+		$waterMarkPositions = array("30", "180");
+		$waterMarkRotate = array("45", "50", "180");
+
+		$pdf->SetFont('Arial', 'B', 50);
+		$pdf->SetTextColor(230, 230, 230);
+		$pdf->Rotate($waterMarkRotate[0], $waterMarkRotate[1], $waterMarkRotate[2]);
+		$pdf->Text($waterMarkPositions[0], $waterMarkPositions[1], 'created');
+		$pdf->Rotate(0);
+		$pdf->SetTextColor(0, 0, 0);
+	}
+}

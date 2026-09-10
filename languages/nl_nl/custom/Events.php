@@ -1,0 +1,21 @@
+<?php
+$languageStrings = array(
+'Guardia1'	=>	'Guardia1',
+'Guardia2'	=>	'Guardia2',
+'Implementación Sistema'	=>	'Implementación Sistema',
+'Visita Presencial'	=>	'Visita Presencial',
+'Presentación Sistema'	=>	'Presentación Sistema',
+'Negociación'	=>	'Negociación',
+'Firma documentos'	=>	'Firma documentos',
+'Entrega Sistema'	=>	'Entrega Sistema',
+'Trabajos en oficina'	=>	'Trabajos en oficina',
+'Solicitud de Recursos'	=>	'Solicitud de Recursos',
+'Recursos Asignados'	=>	'Recursos Asignados',
+'Reagendado'	=>	'Reagendado',
+'Cancelado'	=>	'Cancelado',
+'En progreso'	=>	'En progreso',
+'Capacitación'	=>	'Capacitación',
+'Personal Interno'	=>	'Personal Interno',
+'Cancelación de Recursos'	=>	'Cancelación de Recursos',
+'Reunión Virtual'	=>	'Reunión Virtual',
+);
