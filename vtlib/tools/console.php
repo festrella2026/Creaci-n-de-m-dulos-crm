@@ -222,7 +222,7 @@ class Vtiger_Tools_Console_ModuleController extends Vtiger_Tools_Console_Control
 			$moduleInformation['entityfieldlabel'] = $entityfieldlabel;
 		}
 
-		$moduleInformation['parent'] = 'Tools';
+		$moduleInformation['parent'] = 'Sales';
 
 		echo "Creating ...";
 		$this->create($moduleInformation);

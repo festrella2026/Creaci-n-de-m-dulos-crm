@@ -10,27 +10,27 @@
 
 include_once 'modules/Vtiger/CRMEntity.php';
 
-class Modulo extends Vtiger_CRMEntity {
-	var $table_name = 'vtiger_modulo';
-	var $table_index= 'moduloid';
+class Modulos extends Vtiger_CRMEntity {
+	var $table_name = 'vtiger_modulos';
+	var $table_index= 'modulosid';
 
 	/**
 	 * Mandatory table for supporting custom fields.
 	 */
-	var $customFieldTable = Array('vtiger_modulocf', 'moduloid');
+	var $customFieldTable = Array('vtiger_moduloscf', 'modulosid');
 
 	/**
 	 * Mandatory for Saving, Include tables related to this module.
 	 */
-	var $tab_name = Array('vtiger_crmentity', 'vtiger_modulo', 'vtiger_modulocf');
+	var $tab_name = Array('vtiger_crmentity', 'vtiger_modulos', 'vtiger_moduloscf');
 
 	/**
 	 * Mandatory for Saving, Include tablename and tablekey columnname here.
 	 */
 	var $tab_name_index = Array(
 		'vtiger_crmentity' => 'crmid',
-		'vtiger_modulo' => 'moduloid',
-		'vtiger_modulocf'=>'moduloid');
+		'vtiger_modulos' => 'modulosid',
+		'vtiger_moduloscf'=>'modulosid');
 
 	/**
 	 * Mandatory for Listing (Related listview)
@@ -38,45 +38,45 @@ class Modulo extends Vtiger_CRMEntity {
 	var $list_fields = Array (
 		/* Format: Field Label => Array(tablename, columnname) */
 		// tablename should not have prefix 'vtiger_'
-		'Moduloname' => Array('modulo', 'moduloname'),
+		'Nombre' => Array('modulos', 'modulos_name'),
 		'Assigned To' => Array('crmentity','smownerid')
 	);
 	var $list_fields_name = Array (
 		/* Format: Field Label => fieldname */
-		'Moduloname' => 'moduloname',
+		'Nombre' => 'modulos_name',
 		'Assigned To' => 'assigned_user_id',
 	);
 
 	// Make the field link to detail view
-	var $list_link_field = 'moduloname';
+	var $list_link_field = 'modulos_name';
 
 	// For Popup listview and UI type support
 	var $search_fields = Array(
 		/* Format: Field Label => Array(tablename, columnname) */
 		// tablename should not have prefix 'vtiger_'
-		'Moduloname' => Array('modulo', 'moduloname'),
+		'Nombre' => Array('modulos', 'modulos_name'),
 		'Assigned To' => Array('vtiger_crmentity','assigned_user_id'),
 	);
 	var $search_fields_name = Array (
 		/* Format: Field Label => fieldname */
-		'Moduloname' => 'moduloname',
+		'Nombre' => 'modulos_name',
 		'Assigned To' => 'assigned_user_id',
 	);
 
 	// For Popup window record selection
-	var $popup_fields = Array ('moduloname');
+	var $popup_fields = Array ('modulos_name');
 
 	// For Alphabetical search
-	var $def_basicsearch_col = 'moduloname';
+	var $def_basicsearch_col = 'modulos_name';
 
 	// Column value to use on detail view record text display
-	var $def_detailview_recname = 'moduloname';
+	var $def_detailview_recname = 'modulos_name';
 
 	// Used when enabling/disabling the mandatory fields for the module.
 	// Refers to vtiger_field.fieldname values.
-	var $mandatory_fields = Array('moduloname','assigned_user_id');
+	var $mandatory_fields = Array('modulos_name','assigned_user_id');
 
-	var $default_order_by = 'moduloname';
+	var $default_order_by = 'modulos_name';
 	var $default_sort_order='ASC';
 
 	/**
