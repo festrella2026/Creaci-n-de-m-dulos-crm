@@ -86,16 +86,30 @@ class Modulos extends Vtiger_CRMEntity {
 	*/
 	function vtlib_handler($moduleName, $eventType) {
 		global $adb;
- 		if($eventType == 'module.postinstall') {
-			// TODO Handle actions after this module is installed.
-		} else if($eventType == 'module.disabled') {
-			// TODO Handle actions before this module is being uninstalled.
-		} else if($eventType == 'module.preuninstall') {
-			// TODO Handle actions when this module is about to be deleted.
-		} else if($eventType == 'module.preupdate') {
-			// TODO Handle actions before this module is updated.
-		} else if($eventType == 'module.postupdate') {
-			// TODO Handle actions after this module is updated.
+		include_once 'vtlib/Vtiger/Module.php';
+		if ($eventType == 'module.postinstall' || $eventType == 'module.postupdate') {
+			$accountsModule = Vtiger_Module::getInstance('Accounts');
+			$modulosModule = Vtiger_Module::getInstance('Modulos');
+
+			if (!$accountsModule || !$modulosModule) {
+				return;
+			}
+
+			$relationResult = $adb->pquery(
+				'SELECT relation_id FROM vtiger_relatedlists WHERE tabid=? AND related_tabid=? AND label=?',
+				array($accountsModule->getId(), $modulosModule->getId(), 'Modulos')
+			);
+
+			if (!$relationResult || !$adb->num_rows($relationResult)) {
+				$accountsModule->setRelatedList($modulosModule, 'Modulos', array('ADD', 'SELECT'));
+			}
+		} elseif ($eventType == 'module.preuninstall') {
+			$accountsModule = Vtiger_Module::getInstance('Accounts');
+			$modulosModule = Vtiger_Module::getInstance('Modulos');
+
+			if ($accountsModule && $modulosModule) {
+				$accountsModule->unsetRelatedList($modulosModule, 'Modulos');
+			}
 		}
  	}
 }
