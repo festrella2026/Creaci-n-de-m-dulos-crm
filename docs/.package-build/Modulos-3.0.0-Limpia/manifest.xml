@@ -1,0 +1,56 @@
+<?xml version='1.0'?>
+<module>
+	<exporttime>2026-09-28 00:00:00</exporttime>
+	<name>Modulos</name>
+	<label>Modulos</label>
+	<parent>Sales</parent>
+	<version>3.0.0</version>
+	<dependencies>
+		<vtiger_version>8.4.0</vtiger_version>
+		<vtiger_max_version>8.*</vtiger_max_version>
+	</dependencies>
+	<tables>
+		<table>
+			<name>vtiger_modulos</name>
+			<sql><![CDATA[CREATE TABLE `vtiger_modulos` (
+  `modulosid` int(19) NOT NULL,
+  `modulos_name` varchar(255) DEFAULT NULL,
+  `codigo` varchar(64) DEFAULT NULL,
+  `categoria` varchar(100) DEFAULT NULL,
+  `descripcion` text,
+  `estado_catalogo` varchar(50) NOT NULL DEFAULT 'Activo',
+  `requiere_configuracion` int(1) DEFAULT 0,
+  `obligatorio_todas_estaciones` int(1) DEFAULT 0,
+  `estado` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`modulosid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+		<table>
+			<name>vtiger_moduloscf</name>
+			<sql><![CDATA[CREATE TABLE `vtiger_moduloscf` (
+  `modulosid` int(19) NOT NULL,
+  PRIMARY KEY (`modulosid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+	</tables>
+	<blocks>
+		<block>
+			<label>LBL_MODULOS_INFORMATION</label>
+			<fields>
+				<field><fieldname>modulos_name</fieldname><uitype>2</uitype><columnname>modulos_name</columnname><tablename>vtiger_modulos</tablename><generatedtype>1</generatedtype><fieldlabel>Nombre</fieldlabel><readonly>1</readonly><presence>0</presence><defaultvalue></defaultvalue><sequence>1</sequence><maximumlength>255</maximumlength><typeofdata>V~M</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>0</quickcreatesequence><displaytype>1</displaytype><info_type>BAS</info_type><masseditable>1</masseditable><entityidentifier><entityidfield>modulosid</entityidfield><entityidcolumn>modulosid</entityidcolumn></entityidentifier></field>
+				<field><fieldname>codigo</fieldname><uitype>1</uitype><columnname>codigo</columnname><tablename>vtiger_modulos</tablename><generatedtype>1</generatedtype><fieldlabel>Código</fieldlabel><readonly>1</readonly><presence>2</presence><defaultvalue></defaultvalue><sequence>2</sequence><maximumlength>64</maximumlength><typeofdata>V~O</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>1</quickcreatesequence><displaytype>1</displaytype><info_type>BAS</info_type><masseditable>1</masseditable></field>
+				<field><fieldname>categoria</fieldname><uitype>1</uitype><columnname>categoria</columnname><tablename>vtiger_modulos</tablename><generatedtype>1</generatedtype><fieldlabel>Categoría</fieldlabel><readonly>1</readonly><presence>2</presence><defaultvalue></defaultvalue><sequence>3</sequence><maximumlength>100</maximumlength><typeofdata>V~O</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>2</quickcreatesequence><displaytype>1</displaytype><info_type>BAS</info_type><masseditable>1</masseditable></field>
+				<field><fieldname>descripcion</fieldname><uitype>21</uitype><columnname>descripcion</columnname><tablename>vtiger_modulos</tablename><generatedtype>1</generatedtype><fieldlabel>Descripción</fieldlabel><readonly>1</readonly><presence>2</presence><defaultvalue></defaultvalue><sequence>4</sequence><maximumlength>65535</maximumlength><typeofdata>V~O</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>3</quickcreatesequence><displaytype>1</displaytype><info_type>BAS</info_type><masseditable>1</masseditable></field>
+				<field><fieldname>estado_catalogo</fieldname><uitype>15</uitype><columnname>estado_catalogo</columnname><tablename>vtiger_modulos</tablename><generatedtype>1</generatedtype><fieldlabel>Estado catálogo</fieldlabel><readonly>1</readonly><presence>2</presence><defaultvalue>Activo</defaultvalue><sequence>5</sequence><maximumlength>50</maximumlength><typeofdata>V~M</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>4</quickcreatesequence><displaytype>1</displaytype><info_type>BAS</info_type><masseditable>1</masseditable><picklistvalues><picklistvalue>Activo</picklistvalue><picklistvalue>Inactivo</picklistvalue></picklistvalues></field>
+				<field><fieldname>requiere_configuracion</fieldname><uitype>56</uitype><columnname>requiere_configuracion</columnname><tablename>vtiger_modulos</tablename><generatedtype>1</generatedtype><fieldlabel>Requiere configuración</fieldlabel><readonly>1</readonly><presence>2</presence><defaultvalue>0</defaultvalue><sequence>6</sequence><maximumlength>1</maximumlength><typeofdata>C~O</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>5</quickcreatesequence><displaytype>1</displaytype><info_type>BAS</info_type><masseditable>1</masseditable></field>
+				<field><fieldname>obligatorio_todas_estaciones</fieldname><uitype>56</uitype><columnname>obligatorio_todas_estaciones</columnname><tablename>vtiger_modulos</tablename><generatedtype>1</generatedtype><fieldlabel>Obligatorio en todas las estaciones</fieldlabel><readonly>1</readonly><presence>2</presence><defaultvalue>0</defaultvalue><sequence>7</sequence><maximumlength>1</maximumlength><typeofdata>C~O</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>6</quickcreatesequence><displaytype>1</displaytype><info_type>BAS</info_type><masseditable>1</masseditable></field>
+				<field><fieldname>assigned_user_id</fieldname><uitype>53</uitype><columnname>smownerid</columnname><tablename>vtiger_crmentity</tablename><generatedtype>1</generatedtype><fieldlabel>Assigned To</fieldlabel><readonly>1</readonly><presence>0</presence><defaultvalue></defaultvalue><sequence>8</sequence><maximumlength>100</maximumlength><typeofdata>V~M</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>7</quickcreatesequence><displaytype>1</displaytype><info_type>BAS</info_type><masseditable>1</masseditable></field>
+				<field><fieldname>createdtime</fieldname><uitype>70</uitype><columnname>createdtime</columnname><tablename>vtiger_crmentity</tablename><generatedtype>1</generatedtype><fieldlabel>Created Time</fieldlabel><readonly>1</readonly><presence>0</presence><defaultvalue></defaultvalue><sequence>9</sequence><maximumlength>100</maximumlength><typeofdata>T~O</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>8</quickcreatesequence><displaytype>2</displaytype><info_type>BAS</info_type><masseditable>1</masseditable></field>
+				<field><fieldname>modifiedtime</fieldname><uitype>70</uitype><columnname>modifiedtime</columnname><tablename>vtiger_crmentity</tablename><generatedtype>1</generatedtype><fieldlabel>Modified Time</fieldlabel><readonly>1</readonly><presence>0</presence><defaultvalue></defaultvalue><sequence>10</sequence><maximumlength>100</maximumlength><typeofdata>T~O</typeofdata><quickcreate>1</quickcreate><quickcreatesequence>9</quickcreatesequence><displaytype>2</displaytype><info_type>BAS</info_type><masseditable>1</masseditable></field>
+			</fields>
+		</block>
+	</blocks>
+	<customviews><customview><viewname>All</viewname><setdefault>true</setdefault><setmetrics>false</setmetrics><fields><field><fieldname>modulos_name</fieldname><columnindex>0</columnindex></field><field><fieldname>codigo</fieldname><columnindex>1</columnindex></field><field><fieldname>categoria</fieldname><columnindex>2</columnindex></field><field><fieldname>estado_catalogo</fieldname><columnindex>3</columnindex></field><field><fieldname>obligatorio_todas_estaciones</fieldname><columnindex>4</columnindex></field></fields></customview></customviews>
+	<sharingaccess><default>public_readwrite</default></sharingaccess>
+	<actions><action><name><![CDATA[Import]]></name><status>enabled</status></action><action><name><![CDATA[Export]]></name><status>enabled</status></action></actions>
+</module>
