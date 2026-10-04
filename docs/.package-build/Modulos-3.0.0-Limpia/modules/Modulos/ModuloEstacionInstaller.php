@@ -42,14 +42,14 @@ class ModuloEstacionInstaller {
 		}
 	}
 
-	private static function addField($module, $block, $name, $label, $uitype, $columnType, $dataType, $relatedModules = null, $defaultValue = null) {
+	private static function addField($module, $block, $name, $label, $uitype, $columnType, $dataType, $relatedModules = null, $defaultValue = null, $columnName = null) {
 		$field = Vtiger_Field::getInstance($name, $module);
 		if (!$field) {
 			$field = new Vtiger_Field();
 			$field->name = $name;
 			$field->label = $label;
 			$field->uitype = $uitype;
-			$field->column = $name;
+			$field->column = $columnName ? $columnName : $name;
 			$field->columntype = $columnType;
 			$field->typeofdata = $dataType;
 			$field->presence = 2;
@@ -64,6 +64,14 @@ class ModuloEstacionInstaller {
 		}
 
 		return $field;
+	}
+
+	private static function ensurePhysicalColumnName($tableName, $columnName, $legacyColumnName, $columnType) {
+		global $adb;
+		$columns = $adb->getColumnNames($tableName);
+		if (!in_array($columnName, $columns, true) && in_array($legacyColumnName, $columns, true)) {
+			$adb->pquery("ALTER TABLE $tableName CHANGE COLUMN `$legacyColumnName` `$columnName` $columnType NULL", array());
+		}
 	}
 
 	private static function addSystemField($module, $block, $name, $label, $column, $uitype, $dataType) {
@@ -123,12 +131,14 @@ class ModuloEstacionInstaller {
 	}
 
 	private static function ensureInstanceModule() {
-		$entityClass = 'modules/ModuloEstacion/ModuloEstacion.php';
+		$rootDirectory = dirname(__DIR__, 2);
+		$entityClass = $rootDirectory . '/modules/ModuloEstacion/ModuloEstacion.php';
 		$entityDirectory = dirname($entityClass);
 		if (!is_dir($entityDirectory) && !mkdir($entityDirectory, 0755, true)) {
 			throw new Exception('No se pudo crear el directorio de ModuloEstacion.');
 		}
-		if (!copy('modules/Modulos/ModuloEstacion.php', $entityClass)) {
+		$sourceClass = $rootDirectory . '/modules/Modulos/ModuloEstacion.php';
+		if (!is_file($entityClass) && !copy($sourceClass, $entityClass)) {
 			throw new Exception('No se pudo instalar la clase de ModuloEstacion.');
 		}
 
@@ -209,7 +219,8 @@ class ModuloEstacionInstaller {
 		self::ensurePicklistValues($aviVersion, array('VF747', 'VFZ09'));
 		self::addField($module, $detailsBlock, 'avi_rfid_cantidad_antenas', 'AVI RFID: Cantidad de antenas', 7, 'INT(11)', 'I~O');
 		self::addField($module, $detailsBlock, 'avi_rfid_cantidad_lectores', 'AVI RFID: Cantidad de lectores UHF', 7, 'INT(11)', 'I~O');
-		self::addField($module, $detailsBlock, 'avi_rfid_cantidad_lectores_escritorio', 'AVI RFID: Cantidad de lectores de escritorio', 7, 'INT(11)', 'I~O');
+		self::addField($module, $detailsBlock, 'avi_rfid_cantidad_lectores_escritorio', 'AVI RFID: Cantidad de lectores de escritorio', 7, 'INT(11)', 'I~O', null, null, 'avi_rfid_cantidad_lectores_esc');
+		self::ensurePhysicalColumnName('vtiger_moduloestacion', 'avi_rfid_cantidad_lectores_esc', 'avi_rfid_cantidad_lectores_escritorio', 'INT(11)');
 		self::addField($module, $notesBlock, 'configuracion', 'Configuración', 21, 'TEXT', 'V~O');
 		self::addField($module, $notesBlock, 'novedades', 'Novedades', 21, 'TEXT', 'V~O');
 		self::addField($module, $notesBlock, 'observaciones', 'Observaciones', 21, 'TEXT', 'V~O');
@@ -259,12 +270,12 @@ class ModuloEstacionInstaller {
 			throw new Exception('Se requieren los módulos Accounts y Modulos para instalar ModuloEstacion.');
 		}
 
+		$catalogModule->initWebservice();
 		self::ensureCatalogFields($catalogModule);
 		list($instanceModule) = self::ensureInstanceModule();
 
 		$accountsModule->unsetRelatedList($catalogModule, 'Modulos');
-		ModuloEstacionDuplicateHandler::register($catalogModule, $accountsModule, $instanceModule);
-		ModuloEstacionDuplicateHandler::ensurePumpCatalogRecord();
-		ModuloEstacionDuplicateHandler::ensurePumpForAllAccounts();
+		ModuloEstacionDuplicateHandler::register($catalogModule, $instanceModule);
+		ModuloEstacionDuplicateHandler::ensureCatalogRecords();
 	}
 }

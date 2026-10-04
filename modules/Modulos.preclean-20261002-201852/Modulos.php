@@ -17,6 +17,7 @@ class Modulos extends Vtiger_CRMEntity {
 		'Código' => array('modulos', 'codigo'),
 		'Categoría' => array('modulos', 'categoria'),
 		'Estado catálogo' => array('modulos', 'estado_catalogo'),
+		'Obligatorio en todas las estaciones' => array('modulos', 'obligatorio_todas_estaciones'),
 		'Assigned To' => array('crmentity', 'smownerid')
 	);
 	var $list_fields_name = array(
@@ -24,6 +25,7 @@ class Modulos extends Vtiger_CRMEntity {
 		'Código' => 'codigo',
 		'Categoría' => 'categoria',
 		'Estado catálogo' => 'estado_catalogo',
+		'Obligatorio en todas las estaciones' => 'obligatorio_todas_estaciones',
 		'Assigned To' => 'assigned_user_id'
 	);
 	var $list_link_field = 'modulos_name';

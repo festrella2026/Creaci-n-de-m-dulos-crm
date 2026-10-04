@@ -16,7 +16,7 @@ class ModuloEstacion extends Vtiger_CRMEntity {
 		'Nombre' => array('moduloestacion', 'moduloestacion_name'),
 		'Cuenta / Estación' => array('moduloestacion', 'account_id'),
 		'Módulo' => array('moduloestacion', 'modulo_id'),
-		'Estado' => array('moduloestacion', 'estado'),
+		'Estado' => array('moduloestacion', 'estado_instalacion'),
 		'Fecha de instalación' => array('moduloestacion', 'fecha_instalacion'),
 		'Assigned To' => array('crmentity', 'smownerid')
 	);
@@ -24,7 +24,7 @@ class ModuloEstacion extends Vtiger_CRMEntity {
 		'Nombre' => 'moduloestacion_name',
 		'Cuenta / Estación' => 'account_id',
 		'Módulo' => 'modulo_id',
-		'Estado' => 'estado',
+		'Estado' => 'estado_instalacion',
 		'Fecha de instalación' => 'fecha_instalacion',
 		'Assigned To' => 'assigned_user_id'
 	);
@@ -42,7 +42,7 @@ class ModuloEstacion extends Vtiger_CRMEntity {
 	var $popup_fields = array('moduloestacion_name');
 	var $def_basicsearch_col = 'moduloestacion_name';
 	var $def_detailview_recname = 'moduloestacion_name';
-	var $mandatory_fields = array('moduloestacion_name', 'account_id', 'modulo_id', 'estado', 'assigned_user_id');
+	var $mandatory_fields = array('moduloestacion_name', 'account_id', 'modulo_id', 'estado_instalacion', 'assigned_user_id');
 	var $default_order_by = 'moduloestacion_name';
 	var $default_sort_order = 'ASC';
 }

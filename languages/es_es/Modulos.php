@@ -11,6 +11,7 @@ $languageStrings = array(
 	'descripcion' => 'Descripción',
 	'estado_catalogo' => 'Estado catálogo',
 	'requiere_configuracion' => 'Requiere configuración',
+	'obligatorio_todas_estaciones' => 'Obligatorio en todas las estaciones',
 	'estado' => 'Estado heredado',
 	'assigned_user_id' => 'Asignado a'
 );
