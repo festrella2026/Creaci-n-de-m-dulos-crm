@@ -1,0 +1,54 @@
+<?xml version='1.0'?>
+<schema>
+	<tables>
+		<table>
+			<name>vtiger_servicios</name>
+			<sql><![CDATA[CREATE TABLE `vtiger_servicios` (
+  `serviciosid` int(19) NOT NULL,
+  `servicios_name` varchar(255) DEFAULT NULL,
+  `codigo` varchar(64) DEFAULT NULL,
+  `tipo` varchar(100) DEFAULT NULL,
+  `descripcion` text,
+  `estado` varchar(50) NOT NULL DEFAULT 'no instalado',
+  `obligatorio` int(1) DEFAULT 0,
+  `departamento_responsable` varchar(100) DEFAULT NULL,
+  `requiere_certificacion` int(1) DEFAULT 0,
+  `observaciones` text,
+  PRIMARY KEY (`serviciosid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+		<table>
+			<name>vtiger_servicioscf</name>
+			<sql><![CDATA[CREATE TABLE `vtiger_servicioscf` (
+  `serviciosid` int(19) NOT NULL,
+  PRIMARY KEY (`serviciosid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+		<table>
+			<name>vtiger_serviciosestacion</name>
+			<sql><![CDATA[CREATE TABLE `vtiger_serviciosestacion` (
+  `serviciosestacionid` int(19) NOT NULL,
+  `account_id` int(19) DEFAULT NULL,
+  `servicio_id` int(19) DEFAULT NULL,
+  `estado_instalacion` varchar(50) DEFAULT 'No instalado',
+  `fecha_activacion` date DEFAULT NULL,
+  `fecha_desactivacion` date DEFAULT NULL,
+  `responsable` int(19) DEFAULT NULL,
+  `esquema_instalado` varchar(100) DEFAULT NULL,
+  `cantidad_equipos` int(11) DEFAULT NULL,
+  `version_equipos` varchar(100) DEFAULT NULL,
+  `estado_certificacion` varchar(50) DEFAULT NULL,
+  `fecha_certificacion` date DEFAULT NULL,
+  `observaciones` text,
+  PRIMARY KEY (`serviciosestacionid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+		<table>
+			<name>vtiger_serviciosestacioncf</name>
+			<sql><![CDATA[CREATE TABLE `vtiger_serviciosestacioncf` (
+  `serviciosestacionid` int(19) NOT NULL,
+  PRIMARY KEY (`serviciosestacionid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+	</tables>
+</schema>

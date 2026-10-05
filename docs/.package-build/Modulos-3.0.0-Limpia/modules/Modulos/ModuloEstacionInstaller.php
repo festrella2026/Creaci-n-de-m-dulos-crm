@@ -275,7 +275,7 @@ class ModuloEstacionInstaller {
 		list($instanceModule) = self::ensureInstanceModule();
 
 		$accountsModule->unsetRelatedList($catalogModule, 'Modulos');
-		ModuloEstacionDuplicateHandler::register($catalogModule, $instanceModule);
-		ModuloEstacionDuplicateHandler::ensureCatalogRecords();
+		ModuloEstacionDuplicateHandler::register($catalogModule, $accountsModule, $instanceModule);
+		ModuloEstacionDuplicateHandler::ensurePumpCatalogRecord();
 	}
 }

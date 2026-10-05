@@ -1,0 +1,27 @@
+<?xml version='1.0'?>
+<schema>
+	<tables>
+		<table>
+			<name>vtiger_modulos</name>
+			<sql><![CDATA[CREATE TABLE `vtiger_modulos` (
+  `modulosid` int(19) NOT NULL,
+  `modulos_name` varchar(255) DEFAULT NULL,
+  `codigo` varchar(64) DEFAULT NULL,
+  `categoria` varchar(100) DEFAULT NULL,
+  `descripcion` text,
+  `estado_catalogo` varchar(50) NOT NULL DEFAULT 'Activo',
+  `requiere_configuracion` int(1) DEFAULT 0,
+  `obligatorio_todas_estaciones` int(1) DEFAULT 0,
+  `estado` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`modulosid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+		<table>
+			<name>vtiger_moduloscf</name>
+			<sql><![CDATA[CREATE TABLE `vtiger_moduloscf` (
+  `modulosid` int(19) NOT NULL,
+  PRIMARY KEY (`modulosid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>
+		</table>
+	</tables>
+</schema>

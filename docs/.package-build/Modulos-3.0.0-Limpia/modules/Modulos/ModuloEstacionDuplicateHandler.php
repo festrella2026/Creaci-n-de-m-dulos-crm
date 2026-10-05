@@ -5,8 +5,12 @@ require_once 'include/events/VTEventHandler.inc';
 class ModuloEstacionDuplicateHandler extends VTEventHandler {
 	public function handleEvent($eventName, $entityData) {
 		$moduleName = $entityData->getModuleName();
+		if ($moduleName === 'Accounts' && in_array($eventName, array('vtiger.entity.aftersave', 'vtiger.entity.afterrestore'), true)) {
+			self::ensurePumpForAccount((int)$entityData->getId());
+			return;
+		}
 		if ($moduleName === 'Modulos') {
-			self::validateCatalogName($eventName, $entityData);
+			self::protectCatalog($eventName, $entityData);
 			return;
 		}
 
@@ -14,6 +18,10 @@ class ModuloEstacionDuplicateHandler extends VTEventHandler {
 			return;
 		}
 
+		if ($eventName === 'vtiger.entity.beforedelete') {
+			self::rejectPumpDeletion($entityData);
+			return;
+		}
 		if ($eventName !== 'vtiger.entity.beforesave') {
 			return;
 		}
@@ -26,7 +34,21 @@ class ModuloEstacionDuplicateHandler extends VTEventHandler {
 		}
 
 		global $adb;
+		$pumpId = self::getPumpCatalogId();
 		$recordId = (int)$entityData->getId();
+		if ($recordId && $pumpId) {
+			$previous = $adb->pquery(
+				'SELECT account_id, modulo_id FROM vtiger_moduloestacion WHERE moduloestacionid=?',
+				array($recordId)
+			);
+			if ($previous && $adb->num_rows($previous)) {
+				$previousModuleId = (int)$adb->query_result($previous, 0, 'modulo_id');
+				$previousAccountId = (int)$adb->query_result($previous, 0, 'account_id');
+				if ($previousModuleId === $pumpId && ($moduleId !== $pumpId || $accountId !== $previousAccountId)) {
+					throw new Exception('PUMP es obligatorio para todas las estaciones y no se puede desvincular.');
+				}
+			}
+		}
 
 		$labels = $adb->pquery(
 			'SELECT account.accountname, module.modulos_name'
@@ -64,8 +86,8 @@ class ModuloEstacionDuplicateHandler extends VTEventHandler {
 		}
 	}
 
-	public static function register($catalogModule, $instanceModule) {
-		foreach (array('vtiger.entity.beforesave') as $eventName) {
+	public static function register($catalogModule, $accountsModule, $instanceModule) {
+		foreach (array('vtiger.entity.beforesave', 'vtiger.entity.beforedelete') as $eventName) {
 			Vtiger_Event::register(
 				$catalogModule,
 				$eventName,
@@ -79,19 +101,48 @@ class ModuloEstacionDuplicateHandler extends VTEventHandler {
 				'modules/Modulos/ModuloEstacionDuplicateHandler.php'
 			);
 		}
+		foreach (array('vtiger.entity.aftersave', 'vtiger.entity.afterrestore') as $eventName) {
+			Vtiger_Event::register(
+				$accountsModule,
+				$eventName,
+				'ModuloEstacionDuplicateHandler',
+				'modules/Modulos/ModuloEstacionDuplicateHandler.php'
+			);
+		}
 	}
 
-	private static function validateCatalogName($eventName, $entityData) {
-		if ($eventName !== 'vtiger.entity.beforesave') {
+	private static function protectCatalog($eventName, $entityData) {
+		if (!in_array($eventName, array('vtiger.entity.beforesave', 'vtiger.entity.beforedelete'), true)) {
 			return;
 		}
 
 		global $adb;
 		$recordId = (int)$entityData->getId();
+		if ($eventName === 'vtiger.entity.beforedelete') {
+			if (!$recordId) {
+				return;
+			}
+			$result = $adb->pquery('SELECT modulos_name FROM vtiger_modulos WHERE modulosid=?', array($recordId));
+			if ($result && $adb->num_rows($result) && strtoupper(trim($adb->query_result($result, 0, 'modulos_name'))) === 'PUMP') {
+				throw new Exception('PUMP es obligatorio para todas las estaciones y no se puede eliminar del catálogo.');
+			}
+			return;
+		}
+
 		$data = $entityData->getData();
 		$name = trim((string)$data['modulos_name']);
 		if ($name === '') {
 			return;
+		}
+		if ($recordId) {
+			$current = $adb->pquery('SELECT modulos_name FROM vtiger_modulos WHERE modulosid=?', array($recordId));
+			if ($current && $adb->num_rows($current) && strtoupper(trim($adb->query_result($current, 0, 'modulos_name'))) === 'PUMP' && strtoupper($name) !== 'PUMP') {
+				throw new Exception('PUMP es obligatorio para todas las estaciones y no se puede renombrar.');
+			}
+		}
+		if (strtoupper($name) === 'PUMP') {
+			$entityData->focus->column_fields['obligatorio_todas_estaciones'] = 1;
+			$entityData->focus->column_fields['estado_catalogo'] = 'Activo';
 		}
 
 		$duplicates = $adb->pquery(
@@ -105,6 +156,21 @@ class ModuloEstacionDuplicateHandler extends VTEventHandler {
 		}
 	}
 
+	private static function getPumpCatalogId() {
+		global $adb;
+		$result = $adb->pquery(
+			'SELECT catalog.modulosid FROM vtiger_modulos AS catalog'
+			. ' INNER JOIN vtiger_crmentity AS entity ON entity.crmid=catalog.modulosid AND entity.deleted=0'
+			. ' WHERE UPPER(TRIM(catalog.modulos_name))=? ORDER BY catalog.modulosid LIMIT 1',
+			array('PUMP')
+		);
+		return $result && $adb->num_rows($result) ? (int)$adb->query_result($result, 0, 'modulosid') : 0;
+	}
+
+	public static function ensurePumpCatalogRecord() {
+		self::ensureCatalogRecords();
+	}
+
 	public static function ensureCatalogRecords() {
 		global $adb, $current_user;
 		$ownerId = isset($current_user->id) ? (int)$current_user->id : 0;
@@ -114,7 +180,7 @@ class ModuloEstacionDuplicateHandler extends VTEventHandler {
 		}
 
 		$catalog = array(
-			array('PUMP', 'MOD-PUMP', 0),
+			array('PUMP', 'MOD-PUMP', 1),
 			array('PINPAD', 'MOD-PINPAD', 0),
 			array('TANK', 'MOD-TANK', 0),
 			array('LUBRICANTS', 'MOD-LUBRICANTS', 0),
@@ -152,4 +218,80 @@ class ModuloEstacionDuplicateHandler extends VTEventHandler {
 		}
 	}
 
+	private static function ensurePumpForAccount($accountId) {
+		if (!$accountId) {
+			return;
+		}
+
+		global $adb, $current_user;
+		$pumpId = self::getPumpCatalogId();
+		if (!$pumpId) {
+			return;
+		}
+		$exists = $adb->pquery(
+			'SELECT 1 FROM vtiger_moduloestacion AS instance'
+			. ' INNER JOIN vtiger_crmentity AS entity ON entity.crmid=instance.moduloestacionid AND entity.deleted=0'
+			. ' WHERE instance.account_id=? AND instance.modulo_id=? LIMIT 1',
+			array($accountId, $pumpId)
+		);
+		if ($exists && $adb->num_rows($exists)) {
+			return;
+		}
+
+		$account = $adb->pquery(
+			'SELECT account.accountname, entity.smownerid FROM vtiger_account AS account'
+			. ' INNER JOIN vtiger_crmentity AS entity ON entity.crmid=account.accountid AND entity.deleted=0'
+			. ' WHERE account.accountid=?',
+			array($accountId)
+		);
+		if (!$account || !$adb->num_rows($account)) {
+			return;
+		}
+
+		$accountName = $adb->query_result($account, 0, 'accountname');
+		$ownerId = (int)$adb->query_result($account, 0, 'smownerid');
+		if (!$ownerId && isset($current_user->id)) {
+			$ownerId = (int)$current_user->id;
+		}
+		$instance = CRMEntity::getInstance('ModuloEstacion');
+		$instance->column_fields['moduloestacion_name'] = $accountName . ' - PUMP';
+		$instance->column_fields['account_id'] = $accountId;
+		$instance->column_fields['modulo_id'] = $pumpId;
+		$instance->column_fields['estado_instalacion'] = 'No instalado';
+		$instance->column_fields['assigned_user_id'] = $ownerId;
+		$instance->save('ModuloEstacion');
+	}
+
+	public static function ensurePumpForAccountsBatch($afterAccountId = 0, $batchSize = 20) {
+		global $adb;
+		$batchSize = max(1, min(200, (int)$batchSize));
+		$accounts = $adb->pquery(
+			'SELECT account.accountid FROM vtiger_account AS account'
+			. ' INNER JOIN vtiger_crmentity AS entity ON entity.crmid=account.accountid AND entity.deleted=0'
+			. ' WHERE account.accountid>? ORDER BY account.accountid LIMIT ' . $batchSize,
+			array((int)$afterAccountId)
+		);
+		$processed = $adb->num_rows($accounts);
+		$lastAccountId = (int)$afterAccountId;
+		for ($index = 0; $index < $processed; $index++) {
+			$lastAccountId = (int)$adb->query_result($accounts, $index, 'accountid');
+			self::ensurePumpForAccount($lastAccountId);
+		}
+		return array('processed' => $processed, 'last_account_id' => $lastAccountId);
+	}
+
+	private static function rejectPumpDeletion($entityData) {
+		global $adb;
+		$pumpId = self::getPumpCatalogId();
+		if (!$pumpId) {
+			return;
+		}
+		$result = $adb->pquery(
+			'SELECT modulo_id FROM vtiger_moduloestacion WHERE moduloestacionid=?',
+			array((int)$entityData->getId())
+		);
+		if ($result && $adb->num_rows($result) && (int)$adb->query_result($result, 0, 'modulo_id') === $pumpId) {
+			throw new Exception('PUMP es obligatorio para todas las estaciones y no se puede eliminar.');
+		}
+	}
 }
