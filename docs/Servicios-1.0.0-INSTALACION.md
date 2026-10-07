@@ -11,6 +11,9 @@ No se recomienda utilizarlo como actualización en una instancia que ya tenga es
 - Registra el catálogo inicial con los 12 servicios definidos.
 - Crea validaciones de integridad para evitar duplicados por cuenta y servicio.
 - Añade campos específicos por tipo de servicio, visibles solo cuando corresponde.
+- Excluye de `ServiciosEstacion` los campos generales Cantidad de equipos, Versión de equipos, Estado de certificación y Fecha de certificación; se conservan los campos específicos de cada servicio.
+- El estado de cada servicio por estación queda limitado a `Instalado` / `No instalado`; los valores anteriores se normalizan.
+- Los campos largos de PAY FUELCONTROL y VPN usan nombres físicos cortos y únicos compatibles con el límite de `vtiger_field.columnname`; el instalador migra las columnas existentes conservando sus valores.
 - Registra el comportamiento de instalación y la carga inicial mediante `vtlib`.
 - Incluye traducciones al español para `es_es` y español mexicano (`es_mx`).
 
@@ -57,11 +60,26 @@ No se recomienda utilizarlo como actualización en una instancia que ya tenga es
 3. Crear una instancia de `ServiciosEstacion` y seleccionar un servicio del catálogo.
 4. Confirmar que solamente aparecen los campos del servicio elegido.
 5. Recrear la misma combinación `Cuenta + Servicio` y comprobar que se rechaza el duplicado.
-6. Confirmar que el nombre automático de la instalación se genera como `Cuenta - Servicio`.
+6. Confirmar que **Identificador de instalación** no aparece en el formulario de alta y que, al abrir el registro guardado, se muestra como `Cuenta - Servicio`.
+7. Confirmar que el campo **Estado de instalación** solo ofrece `Instalado` y `No instalado`.
 
 ## Activar español mexicano en una instalación existente
 
 Este ZIP es de instalación limpia; no volver a importarlo como actualización en una instancia que ya tenga `Servicios` o `ServiciosEstacion`. Copiar solamente `languages/es_mx/Servicios.php` y `languages/es_mx/ServiciosEstacion.php` del ZIP a `languages/es_mx/` en el servidor, conservando permisos de lectura para el servidor web. Después cerrar sesión e iniciar sesión nuevamente con el idioma **Español mexicano**.
+
+## Ocultar campos generales en una instancia existente
+
+Para quitar del formulario `Cantidad de equipos`, `Versión de equipos`, `Estado de certificación` y `Fecha de certificación` sin borrar sus datos históricos, ejecutar una vez en la base de datos:
+
+```sql
+UPDATE vtiger_field AS field
+INNER JOIN vtiger_tab AS tab ON tab.tabid = field.tabid
+SET field.presence = 1
+WHERE tab.name = 'ServiciosEstacion'
+   AND field.fieldname IN ('cantidad_equipos', 'version_equipos', 'estado_certificacion', 'fecha_certificacion');
+```
+
+Después cerrar sesión y volver a entrar. Los campos de certificación específicos de IISE, Datafast y Medianet no se modifican.
 
 ## Observaciones
 
@@ -69,3 +87,14 @@ Este ZIP es de instalación limpia; no volver a importarlo como actualización e
 - No se crea una instancia de servicio para todas las cuentas existentes.
 - El catálogo es reutilizable y no se duplica por estación.
 - No se almacenan secretos, tokens ni credenciales en texto plano.
+
+## Trabajo realizado en esta sesión
+
+- Se prepararon las traducciones `es_mx` para `Servicios`, `ServiciosEstacion`, `Modulos` y `ModuloEstacion` en `languages/es_mx/`.
+- Se corrigió la visibilidad condicional de los campos específicos de `ModuloEstacion`: responde al seleccionar o limpiar el módulo y oculta cada campo sin afectar a otro campo de la misma fila. El cambio también se incorporó al ZIP limpio de Modulos 3.0.
+- Se corrigió la visibilidad condicional de `ServiciosEstacion`: responde a los eventos de selección y limpieza de la referencia Servicio, y oculta cada campo específico sin ocultar otros campos de la misma fila. Se incorporó al ZIP limpio de Servicios 1.0.
+- Los estados de instalación de Servicios y Modulos se limitaron a `Instalado` y `No instalado`. Los instaladores normalizan valores heredados y eliminan opciones antiguas del picklist. Se actualizaron los paquetes Servicios 1.0 y Modulos 2.1/3.0.
+- En `ServiciosEstacion` se dejaron de crear los campos generales Cantidad de equipos, Versión de equipos, Estado de certificación y Fecha de certificación. En instalaciones existentes se ocultan conservando los datos; los campos específicos de certificación por servicio permanecen.
+- El guardado de `ServiciosEstacion` ahora rechaza una Cuenta o un Servicio inexistente con un mensaje explícito, en vez de guardar una referencia inválida. El handler se actualizó también en el ZIP limpio de Servicios.
+- Se validó la sintaxis PHP de los instaladores y handlers modificados, la validez del manifiesto y el contenido de los ZIP actualizados. No se confirmó mediante consulta el estado de los metadatos en la base activa, ni se realizó una prueba de interfaz dentro de Vtiger.
+- Los ZIP de Servicios y Modulos son de instalación limpia salvo Modulos 2.1, que es el paquete de actualización. No importar paquetes limpios como actualización sobre módulos existentes; aplicar en esas instancias los pasos de migración documentados arriba.

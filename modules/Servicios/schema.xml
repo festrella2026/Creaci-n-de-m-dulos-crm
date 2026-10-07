@@ -35,10 +35,6 @@
   `fecha_desactivacion` date DEFAULT NULL,
   `responsable` int(19) DEFAULT NULL,
   `esquema_instalado` varchar(100) DEFAULT NULL,
-  `cantidad_equipos` int(11) DEFAULT NULL,
-  `version_equipos` varchar(100) DEFAULT NULL,
-  `estado_certificacion` varchar(50) DEFAULT NULL,
-  `fecha_certificacion` date DEFAULT NULL,
   `observaciones` text,
   PRIMARY KEY (`serviciosestacionid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8]]></sql>

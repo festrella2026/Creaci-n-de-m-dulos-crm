@@ -38,11 +38,13 @@ class ServiciosEstacionDuplicateHandler extends VTEventHandler {
             array($serviceId, $accountId)
         );
 
-        if ($labels && $adb->num_rows($labels)) {
-            $accountName = $adb->query_result($labels, 0, 'accountname');
-            $serviceName = $adb->query_result($labels, 0, 'servicios_name');
-            $entityData->focus->column_fields['serviciosestacion_name'] = $accountName . ' - ' . $serviceName;
+        if (!$labels || !$adb->num_rows($labels)) {
+            throw new Exception('La cuenta o el servicio seleccionado ya no existe. Vuelva a seleccionarlos antes de guardar.');
         }
+
+        $accountName = $adb->query_result($labels, 0, 'accountname');
+        $serviceName = $adb->query_result($labels, 0, 'servicios_name');
+        $entityData->focus->column_fields['serviciosestacion_name'] = $accountName . ' - ' . $serviceName;
 
         $query = 'SELECT 1 FROM vtiger_serviciosestacion AS instance'
             . ' INNER JOIN vtiger_crmentity AS entity ON entity.crmid=instance.serviciosestacionid'

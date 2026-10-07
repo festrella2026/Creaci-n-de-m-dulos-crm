@@ -41,9 +41,31 @@ jQuery(function ($) {
 		});
 	}
 
+	function hideGeneratedNameOnCreate() {
+		var $name = $('[name="moduloestacion_name"]');
+		if (!$name.length) {
+			return;
+		}
+
+		var recordId = String($name.closest('form').find('[name="record"]').val() || '').trim();
+		if (!recordId || recordId === '0') {
+			rowForField('moduloestacion_name').hide();
+		}
+	}
+
 	$(document).on('change input', '#modulo_id, #modulo_id_display', updateModuleFields);
 	$(document).on('click', '.relatedPopup', function () {
 		window.setTimeout(updateModuleFields, 250);
 	});
 	updateModuleFields();
+	hideGeneratedNameOnCreate();
+
+	var saveError = new URLSearchParams(window.location.search).get('saveError');
+	if (saveError === 'duplicateModule') {
+		app.helper.showErrorNotification({
+			message: 'Este módulo ya está asociado a esta estación.'
+		}, {
+			delay: 0
+		});
+	}
 });

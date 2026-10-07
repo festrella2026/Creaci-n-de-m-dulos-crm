@@ -8,12 +8,13 @@ Este paquete actualiza `Modulos` desde la versión 2.0.0 e instala `ModuloEstaci
 - El registro `PUMP` del catálogo queda marcado obligatorio. Si no existe, se crea con código `MOD-PUMP`.
 - El backend impide duplicar nombres de tipos de módulo en el catálogo, y no permite borrar, renombrar o desactivar PUMP ni quitarle la marca de obligatorio.
 - `ModuloEstacion` registra Cuenta, Módulo, Estado, fechas, responsables, pruebas, versión/modelo, configuración, novedades y observaciones.
-- Estado de instalación se limita al picklist `Instalado` / `No instalado`; el valor inicial es `No instalado`. Los registros de estación existentes con el campo heredado `estado` se convierten y ese campo antiguo se oculta.
+- Estado de instalación se limita al picklist `Instalado` / `No instalado`; el valor inicial es `No instalado`. Los estados heredados se normalizan a esos dos valores y las opciones antiguas se eliminan del picklist. Los registros existentes con el campo heredado `estado` se convierten y ese campo antiguo se oculta.
 - Los campos específicos recomendados se agregan como campos tipados. En PINPAD se guardan cantidades de lados, dispensadores e islas por separado para expresar el esquema `X lado - X dispensador - X isla`.
-- El formulario de edición muestra campos específicos según el tipo de catálogo seleccionado.
+- El formulario de edición muestra campos específicos según el tipo de catálogo seleccionado. Al crear una instalación, `Nombre` se genera como `Cuenta - Módulo` y no se muestra para edición manual.
 - La instalación crea una instancia PUMP en estado `No instalado` para cada cuenta activa existente; las cuentas nuevas y restauradas reciben esa instancia automáticamente.
 - El backend impide duplicar Cuenta + Módulo y evita eliminar o desvincular la instancia PUMP.
-- El lookup de Cuenta agrega la lista relacionada **Módulos** a Accounts; la relación directa Accounts → catálogo se elimina. `ModuloEstacion` no se agrega al menú principal.
+- En la actualización se eliminan los campos generales Departamento responsable y Versión / Modelo, junto con sus columnas y datos guardados.
+- El lookup de Cuenta agrega la lista relacionada **Módulos** a Accounts; la relación directa Accounts → catálogo se elimina. La lista permite **Agregar** registros, pero no **Seleccionar** registros existentes. `ModuloEstacion` no se agrega al menú principal.
 
 ## Campos específicos
 
@@ -35,7 +36,7 @@ Estos campos son opcionales salvo que el negocio defina requisitos adicionales. 
 4. Seleccionar **Update** para `Modulos` (la versión anterior quedó registrada como `2.0.0`).
 5. Tras la confirmación, revisar **Accounts > una cuenta > Módulos**, el catálogo `Modulos` y las instancias PUMP existentes.
 6. Crear una cuenta de prueba y verificar que recibe PUMP `No instalado`. Intentar eliminar/desvincular su instancia PUMP; el backend debe impedirlo.
-7. Para una misma cuenta, crear PINPAD u otro módulo una vez; reintentar la misma combinación y confirmar el mensaje de duplicado. En otra cuenta debe poder agregarse el mismo tipo de catálogo.
+7. Para una misma cuenta, crear PINPAD u otro módulo una vez; reintentar la misma combinación y confirmar que aparece una notificación clara de duplicado y se vuelve al formulario, no a una página JSON. En otra cuenta debe poder agregarse el mismo tipo de catálogo.
 8. Cambiar el tipo de módulo en el formulario y verificar que aparecen los campos propios; revisar los mismos campos en Reports.
 
 ## Importante sobre el significado de PUMP

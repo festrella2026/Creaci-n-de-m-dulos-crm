@@ -45,23 +45,50 @@ jQuery(function ($) {
         if (!$field.length) {
             $field = $('#' + fieldName);
         }
-        return $field.closest('tr');
+        var $valueCell = $field.closest('td.fieldValue');
+        if ($valueCell.length) {
+            return $valueCell.add($valueCell.prev('td.fieldLabel'));
+        }
+        return $field.closest('.fieldValue, .fieldLabel');
     }
 
-    function updateServiceFields() {
-        var selected = getSelectedServiceName();
+    function updateServiceFields(selectedName) {
+        var selected = String(selectedName || getSelectedServiceName()).trim().toUpperCase();
         var visible = serviceFields[selected] || [];
         allSpecificFields.forEach(function (fieldName) {
-            var $row = rowForField(fieldName);
-            if ($row.length) {
-                $row.toggle(visible.indexOf(fieldName) !== -1);
+            var $cells = rowForField(fieldName);
+            if ($cells.length) {
+                $cells.toggle(visible.indexOf(fieldName) !== -1);
             }
         });
     }
 
-    $(document).on('change input', '#servicio_id, #servicio_id_display', updateServiceFields);
+    function hideGeneratedIdentifierOnCreate() {
+        var $identifier = $('[name="serviciosestacion_name"]');
+        if (!$identifier.length) {
+            return;
+        }
+
+        var recordId = String($identifier.closest('form').find('[name="record"]').val() || '').trim();
+        if (!recordId || recordId === '0') {
+            rowForField('serviciosestacion_name').hide();
+        }
+    }
+
+    $(document).on('change input', '#servicio_id_display', function () {
+        updateServiceFields();
+    });
+    $(document).on('Vtiger.Reference.Selection', '[name="servicio_id"]', function (event, selection) {
+        updateServiceFields(selection && (selection.selectedName || selection.label || selection.name));
+    });
+    $(document).on('Vtiger.Reference.Deselection', '.clearReferenceSelection', function () {
+        if ($(this).closest('.input-group').find('[name="servicio_id"]').length) {
+            updateServiceFields('');
+        }
+    });
     $(document).on('click', '.relatedPopup', function () {
         window.setTimeout(updateServiceFields, 250);
     });
     updateServiceFields();
+    hideGeneratedIdentifierOnCreate();
 });

@@ -5,11 +5,11 @@ Este paquete es para una instancia Vtiger CRM 8.4.x donde **todavía no existen*
 ## Incluye
 
 - Crea el módulo catálogo `Modulos` y sus tablas/campos a partir de `manifest.xml`.
-- Crea `ModuloEstacion`, sus tablas y relaciones Accounts → ModuloEstacion → Modulos.
+- Crea `ModuloEstacion`, sus tablas y relaciones Accounts → ModuloEstacion → Modulos. En la lista relacionada de una cuenta queda disponible **Agregar**; no se ofrece **Seleccionar** registros existentes.
 - Precarga en el catálogo: PUMP, PINPAD, TANK, LUBRICANTS, PROMOS, PRICE TOTEM, FLEET BUS, PRINTER, BARCODE, RFID HF y AVI RFID.
 - PUMP queda marcado como obligatorio. El backfill CLI crea una instancia PUMP `No instalado` para cada cuenta existente; el evento de Accounts la crea para cada cuenta nueva/restaurada. El backend impide borrar o desvincular esa instancia.
 - El Estado de instalación solo admite `Instalado` y `No instalado`.
-- Incluye los campos específicos por módulo del Excel, visibilidad condicional en el formulario, protección backend contra duplicados Cuenta + Módulo y validación PINPAD de 2 a 10 equipos.
+- Incluye los campos específicos por módulo del Excel, visibilidad condicional en el formulario, nombre automático `Cuenta - Módulo` oculto durante el alta, protección backend contra duplicados Cuenta + Módulo y validación PINPAD de 2 a 10 equipos. No incluye los campos generales Departamento responsable ni Versión / Modelo.
 - No instala Servicios ni ServicioEstacion; esos módulos quedan para una etapa independiente.
 
 ## Requisitos
@@ -40,7 +40,7 @@ Este paquete es para una instancia Vtiger CRM 8.4.x donde **todavía no existen*
 
 6. Revisar **Ventas > Modulos**. Deben aparecer los once tipos de catálogo; `PUMP` debe figurar como obligatorio.
 7. Abrir cuentas existentes y confirmar que tienen PUMP en estado `No instalado`. Crear una cuenta nueva y confirmar que también recibe PUMP automáticamente. Intentar borrarlo o cambiarlo; la operación debe ser rechazada.
-8. En una estación, crear PINPAD una vez; comprobar sus campos. Repetir Cuenta + PINPAD y confirmar el rechazo de duplicado. Probar que la misma entrada PINPAD sí se puede crear en otra cuenta.
+8. En una estación, crear PINPAD una vez; comprobar sus campos. Repetir Cuenta + PINPAD y confirmar que aparece una notificación clara de duplicado y se vuelve al formulario, no a una página JSON. Probar que la misma entrada PINPAD sí se puede crear en otra cuenta.
 9. Confirmar el filtro **All** de `ModuloEstacion`. El ZIP no incluye informes; si se necesitan, crearlos o importarlos por separado desde Reports.
 
 ## Catálogo inicial

@@ -29,7 +29,8 @@ Este documento describe la verificación mínima recomendada antes de dar el mó
 
 ### Criterio 2: nombre automático
 - Crear una instancia desde una cuenta.
-- Confirmar que el identificador del registro se genera como `Cuenta - Servicio`.
+- Confirmar que el campo `Identificador de instalación` no se muestra durante el alta.
+- Guardar la instancia y confirmar que el identificador se genera y se muestra como `Cuenta - Servicio`.
 
 ### Criterio 3: campos dependiendo del servicio
 - Seleccionar `PINPAD` no aplica porque este módulo no usa ese catálogo; aquí se prueba cada servicio del listado.
@@ -62,6 +63,7 @@ Este documento describe la verificación mínima recomendada antes de dar el mó
 - En la validación de Vtiger 8.4, el último archivo `languages/en_us/*.php` debe coincidir con el `<name>` del módulo en `manifest.xml`.
 - Para este paquete, `languages/en_us/Servicios.php` debe quedar después de `languages/en_us/ServiciosEstacion.php`.
 - Comprobar el ZIP final después de empaquetar; ordenar los archivos alfabéticamente puede dejar el idioma del módulo raíz antes del idioma del módulo relacionado.
+- Si falla la validación, volver a descargar el ZIP corregido y cargarlo como módulo nuevo. El ZIP de instalación limpia actual deja `languages/en_us/Servicios.php` al final del directorio central del ZIP.
 
 ### Error: no aparece el módulo en el menú
 - Revisar que la módulo `Servicios` se haya guardado correctamente.
@@ -77,7 +79,30 @@ Este documento describe la verificación mínima recomendada antes de dar el mó
 
 ### Error: no se ocultan los campos específicos
 - Revisar el JS condicional de [docs/.package-build/Servicios-1.0.0-Limpia/layouts/v7/modules/ServiciosEstacion/resources/Edit.js](docs/.package-build/Servicios-1.0.0-Limpia/layouts/v7/modules/ServiciosEstacion/resources/Edit.js).
-- Confirmar que el valor de `#servicio_id_display` coincide con el nombre del servicio del catálogo.
+- Confirmar que la selección de `servicio_id` actualiza los campos visibles y que al limpiar la referencia se ocultan.
+- Confirmar que el nombre elegido, por ejemplo `PAY FUELCONTROL-DATAFAST`, coincide con una clave del mapa de campos y que solo se ocultan las celdas de esos campos, no la fila completa.
+
+## 8. Corrección aplicada: columnas truncadas
+
+### Causa
+- Al intentar agregar una instalación de servicio, Vtiger devolvía `El registro al que intenta acceder no existe`.
+- La revisión encontró 14 campos activos de `ServiciosEstacion` cuyo `vtiger_field.columnname` había quedado truncado al límite de 30 caracteres.
+- Algunos campos distintos de Datafast y Medianet compartían el mismo nombre truncado, por lo que la consulta de recuperación de Vtiger apuntaba a columnas inexistentes o ambiguas.
+
+### Cambio realizado
+- Se asignaron nombres físicos cortos y únicos a las 14 columnas afectadas (`svc_pay_*` y `svc_vpn_cantidad_activas`), conservando sin cambios los nombres lógicos de los campos y sus etiquetas.
+- Se renombraron las columnas físicas de `vtiger_serviciosestacion` y se actualizó `vtiger_field.columnname` para que ambos esquemas coincidan.
+- Los 14 campos no tenían valores no nulos al momento de la migración; las operaciones `ALTER TABLE ... CHANGE COLUMN` preservaron sus valores existentes.
+- Se incorporó al instalador una migración idempotente para que instalaciones futuras asignen los nombres compatibles y para que una actualización pueda reparar el mapeo existente.
+
+### Pruebas ejecutadas
+- Auditoría posterior: 44 campos activos de `ServiciosEstacion`, 0 columnas físicas faltantes y 0 mapeos duplicados.
+- Prueba con el flujo normal de Vtiger: se creó y recuperó una instalación temporal del servicio `NOTICES` para una cuenta válida; la operación pasó. Se eliminó únicamente el registro temporal después de la prueba.
+- Estado posterior: `vtiger_serviciosestacion` quedó sin filas de prueba.
+- ZIP `Servicios-1.0.0-INSTALACION-LIMPIA.zip`: estructura/CRC válida, 12 entradas idénticas al staging y todos los archivos PHP incluidos pasaron `php -l`.
+
+### Datos preexistentes observados
+- Antes de la prueba se encontraron 17 filas huérfanas en `vtiger_crmentity` con `setype='ServiciosEstacion'`, sin fila correspondiente en `vtiger_serviciosestacion`. No se modificaron ni eliminaron como parte de esta corrección.
 
 ## Conclusión
 

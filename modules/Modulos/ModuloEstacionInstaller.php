@@ -74,6 +74,31 @@ class ModuloEstacionInstaller {
 		}
 	}
 
+	private static function removeGeneralFields($module) {
+		global $adb;
+		foreach (array('departamento_responsable', 'version_modelo') as $fieldName) {
+			$field = Vtiger_Field::getInstance($fieldName, $module);
+			$tableName = $field ? $field->table : 'vtiger_moduloestacion';
+			$columnName = $field ? $field->column : $fieldName;
+			if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName) || !preg_match('/^[a-zA-Z0-9_]+$/', $columnName)) {
+				throw new Exception('No se pudo validar la columna de ' . $fieldName . ' para eliminarla.');
+			}
+
+			if (in_array($columnName, $adb->getColumnNames($tableName), true)) {
+				$result = $adb->pquery("ALTER TABLE `$tableName` DROP COLUMN `$columnName`", array());
+				if (!$result) {
+					throw new Exception('No se pudieron eliminar los datos del campo ' . $fieldName . '.');
+				}
+			}
+			if ($field) {
+				$field->delete();
+				if (Vtiger_Field::getInstance($fieldName, $module)) {
+					throw new Exception('No se pudo eliminar la definición del campo ' . $fieldName . '.');
+				}
+			}
+		}
+	}
+
 	private static function addSystemField($module, $block, $name, $label, $column, $uitype, $dataType) {
 		$field = Vtiger_Field::getInstance($name, $module);
 		if (!$field) {
@@ -180,18 +205,22 @@ class ModuloEstacionInstaller {
 		$legacyStatus = Vtiger_Field::getInstance('estado', $module);
 		if ($legacyStatus && $legacyStatus->id != $instanceStatus->id) {
 			global $adb;
-			$adb->pquery("UPDATE vtiger_moduloestacion SET estado_instalacion=CASE WHEN LOWER(estado) IN ('instalado','activo') THEN 'Instalado' ELSE 'No instalado' END WHERE estado_instalacion IS NULL OR estado_instalacion=''", array());
+			$adb->pquery("UPDATE vtiger_moduloestacion SET estado_instalacion=CASE WHEN LOWER(estado) IN ('instalado','installed','activo','active') THEN 'Instalado' ELSE 'No instalado' END WHERE estado_instalacion IS NULL OR estado_instalacion=''", array());
 			$adb->pquery('UPDATE vtiger_field SET displaytype=2 WHERE fieldid=?', array($legacyStatus->id));
 		}
+		global $adb;
+		$adb->pquery(
+			"UPDATE vtiger_moduloestacion SET estado_instalacion=CASE WHEN LOWER(TRIM(COALESCE(estado_instalacion,''))) IN ('instalado','installed','activo','active') THEN 'Instalado' ELSE 'No instalado' END WHERE estado_instalacion IS NULL OR BINARY TRIM(estado_instalacion) NOT IN ('Instalado','No instalado')",
+			array()
+		);
+		self::replacePicklistValues($instanceStatus, array('Instalado', 'No instalado'));
 
 		self::addField($module, $detailsBlock, 'fecha_prevista_instalacion', 'Fecha prevista de instalación', 5, 'DATE', 'D~O');
 		self::addField($module, $detailsBlock, 'fecha_instalacion', 'Fecha de instalación', 5, 'DATE', 'D~O');
 		self::addField($module, $detailsBlock, 'fecha_activacion', 'Fecha de activación', 5, 'DATE', 'D~O');
 		self::addField($module, $detailsBlock, 'responsable_tecnico', 'Responsable técnico', 1, 'VARCHAR(100)', 'V~O');
-		self::addField($module, $detailsBlock, 'departamento_responsable', 'Departamento responsable', 1, 'VARCHAR(100)', 'V~O');
 		$testStatus = self::addField($module, $detailsBlock, 'estado_pruebas', 'Estado de pruebas', 15, 'VARCHAR(50)', 'V~O');
 		self::ensurePicklistValues($testStatus, array('Pendiente', 'En pruebas', 'Aprobado', 'Rechazado', 'No aplica'));
-		self::addField($module, $detailsBlock, 'version_modelo', 'Versión / Modelo', 1, 'VARCHAR(100)', 'V~O');
 
 		$pinpadVersion = self::addField($module, $detailsBlock, 'pinpad_version', 'Versión PINPAD', 15, 'VARCHAR(50)', 'V~O');
 		self::ensurePicklistValues($pinpadVersion, array('II ID', 'PLUS', 'PLUS EXT'));
@@ -273,6 +302,7 @@ class ModuloEstacionInstaller {
 		$catalogModule->initWebservice();
 		self::ensureCatalogFields($catalogModule);
 		list($instanceModule) = self::ensureInstanceModule();
+		self::removeGeneralFields($instanceModule);
 
 		$accountsModule->unsetRelatedList($catalogModule, 'Modulos');
 		ModuloEstacionDuplicateHandler::register($catalogModule, $instanceModule);

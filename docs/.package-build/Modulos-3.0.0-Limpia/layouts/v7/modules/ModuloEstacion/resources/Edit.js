@@ -27,23 +27,59 @@ jQuery(function ($) {
 		if (!$field.length) {
 			$field = $('#' + fieldName);
 		}
-		return $field.closest('tr');
+		var $valueCell = $field.closest('td.fieldValue');
+		if ($valueCell.length) {
+			return $valueCell.add($valueCell.prev('td.fieldLabel'));
+		}
+		return $field.closest('.fieldValue, .fieldLabel');
 	}
 
-	function updateModuleFields() {
-		var selected = getSelectedModuleName();
+	function updateModuleFields(selectedName) {
+		var selected = String(selectedName || getSelectedModuleName()).trim().toUpperCase();
 		var visible = moduleFields[selected] || [];
 		allSpecificFields.forEach(function (fieldName) {
-			var $row = rowForField(fieldName);
-			if ($row.length) {
-				$row.toggle(visible.indexOf(fieldName) !== -1);
+			var $cells = rowForField(fieldName);
+			if ($cells.length) {
+				$cells.toggle(visible.indexOf(fieldName) !== -1);
 			}
 		});
 	}
 
-	$(document).on('change input', '#modulo_id, #modulo_id_display', updateModuleFields);
+	function hideGeneratedNameOnCreate() {
+		var $name = $('[name="moduloestacion_name"]');
+		if (!$name.length) {
+			return;
+		}
+
+		var recordId = String($name.closest('form').find('[name="record"]').val() || '').trim();
+		if (!recordId || recordId === '0') {
+			rowForField('moduloestacion_name').hide();
+		}
+	}
+
+	$(document).on('change input', '#modulo_id, #modulo_id_display', function () {
+		updateModuleFields();
+	});
+	if (window.Vtiger_Edit_Js) {
+		$(document).on(Vtiger_Edit_Js.referenceSelectionEvent, '[name="modulo_id"]', function (event, selection) {
+			updateModuleFields(selection && (selection.selectedName || selection.label || selection.name));
+		});
+		$(document).on(Vtiger_Edit_Js.referenceDeSelectionEvent, '[name="modulo_id"]', function () {
+			updateModuleFields('');
+		});
+	}
 	$(document).on('click', '.relatedPopup', function () {
 		window.setTimeout(updateModuleFields, 250);
 	});
 	updateModuleFields();
+	hideGeneratedNameOnCreate();
+
+	var saveError = new URLSearchParams(window.location.search).get('saveError');
+	if (saveError === 'duplicateModule') {
+		app.helper.showErrorNotification({
+			message: 'Este módulo ya está asociado a esta estación.'
+		}, {
+			delay: 0
+		});
+	}
 });

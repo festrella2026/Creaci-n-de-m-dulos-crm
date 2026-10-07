@@ -25,6 +25,23 @@ class ServiciosEstacionInstaller {
         }
     }
 
+    private static function replacePicklistValues($field, $values) {
+        self::ensurePicklistValues($field, $values);
+        global $adb;
+        $table = 'vtiger_' . $field->name;
+        $idColumn = $field->name . 'id';
+        $result = $adb->pquery(
+            "SELECT $idColumn, picklist_valueid FROM $table WHERE $field->name NOT IN (?,?)",
+            $values
+        );
+        for ($index = 0; $index < $adb->num_rows($result); $index++) {
+            $valueId = $adb->query_result($result, $index, 'picklist_valueid');
+            $rowId = $adb->query_result($result, $index, $idColumn);
+            $adb->pquery('DELETE FROM vtiger_role2picklist WHERE picklistvalueid=?', array($valueId));
+            $adb->pquery("DELETE FROM $table WHERE $idColumn=?", array($rowId));
+        }
+    }
+
     private static function addField($module, $block, $name, $label, $uitype, $columnType, $dataType, $relatedModules = null, $defaultValue = null, $columnName = null) {
         $field = Vtiger_Field::getInstance($name, $module);
         if (!$field) {
@@ -49,6 +66,32 @@ class ServiciosEstacionInstaller {
         return $field;
     }
 
+    private static function ensurePhysicalColumnName($module, $fieldName, $columnName, $columnType) {
+        global $adb;
+        $fieldResult = $adb->pquery(
+            'SELECT fieldid, tablename, columnname FROM vtiger_field WHERE tabid=? AND fieldname=?',
+            array($module->id, $fieldName)
+        );
+        if (!$fieldResult || !$adb->num_rows($fieldResult)) {
+            return;
+        }
+
+        $fieldId = (int)$adb->query_result($fieldResult, 0, 'fieldid');
+        $tableName = $adb->query_result($fieldResult, 0, 'tablename');
+        $currentColumn = $adb->query_result($fieldResult, 0, 'columnname');
+        $columns = $adb->getColumnNames($tableName);
+        if (!in_array($columnName, $columns, true)) {
+            $legacyColumn = in_array($fieldName, $columns, true) ? $fieldName : $currentColumn;
+            if (!in_array($legacyColumn, $columns, true)) {
+                throw new Exception('No se encuentra la columna física del campo ' . $fieldName . '.');
+            }
+            $adb->pquery("ALTER TABLE $tableName CHANGE COLUMN `$legacyColumn` `$columnName` $columnType NULL", array());
+        }
+        if ($currentColumn !== $columnName) {
+            $adb->pquery('UPDATE vtiger_field SET columnname=? WHERE fieldid=?', array($columnName, $fieldId));
+        }
+    }
+
     private static function addSystemField($module, $block, $name, $label, $column, $uitype, $dataType) {
         $field = Vtiger_Field::getInstance($name, $module);
         if (!$field) {
@@ -66,6 +109,16 @@ class ServiciosEstacionInstaller {
             $block->addField($field);
         }
         return $field;
+    }
+
+    private static function hideObsoleteGeneralFields($module) {
+        global $adb;
+        $fieldNames = array('cantidad_equipos', 'version_equipos', 'estado_certificacion', 'fecha_certificacion');
+        $placeholders = implode(',', array_fill(0, count($fieldNames), '?'));
+        $adb->pquery(
+            "UPDATE vtiger_field SET presence=1 WHERE tabid=? AND fieldname IN ($placeholders)",
+            array_merge(array($module->id), $fieldNames)
+        );
     }
 
     private static function ensureCatalogFields($module) {
@@ -147,16 +200,17 @@ class ServiciosEstacionInstaller {
         $accountField = self::addField($module, $informationBlock, 'account_id', 'Cuenta', 10, 'INT(19)', 'I~M', array('Accounts' => 'Servicios'));
         self::addField($module, $informationBlock, 'servicio_id', 'Servicio', 10, 'INT(19)', 'I~M', array('Servicios'));
         $statusField = self::addField($module, $informationBlock, 'estado_instalacion', 'Estado de instalación', 15, 'VARCHAR(50)', 'V~M', null, 'No instalado');
-        self::ensurePicklistValues($statusField, array('No instalado', 'Pendiente', 'En configuración', 'Activo', 'Suspendido', 'Inactivo'));
+        global $adb;
+        $adb->pquery(
+            "UPDATE vtiger_serviciosestacion SET estado_instalacion=CASE WHEN LOWER(TRIM(COALESCE(estado_instalacion,''))) IN ('instalado','installed','activo','active') THEN 'Instalado' ELSE 'No instalado' END WHERE estado_instalacion IS NULL OR BINARY TRIM(estado_instalacion) NOT IN ('Instalado','No instalado')",
+            array()
+        );
+        self::replacePicklistValues($statusField, array('Instalado', 'No instalado'));
         self::addField($module, $detailsBlock, 'fecha_activacion', 'Fecha de activación', 5, 'DATE', 'D~O');
         self::addField($module, $detailsBlock, 'fecha_desactivacion', 'Fecha de desactivación', 5, 'DATE', 'D~O');
         $responsibleField = self::addField($module, $detailsBlock, 'responsable', 'Responsable', 53, 'INT(19)', 'I~O', array('Users'));
         self::addField($module, $detailsBlock, 'esquema_instalado', 'Esquema instalado', 1, 'VARCHAR(100)', 'V~O');
-        self::addField($module, $detailsBlock, 'cantidad_equipos', 'Cantidad de equipos', 7, 'INT(11)', 'I~O');
-        self::addField($module, $detailsBlock, 'version_equipos', 'Versión de equipos', 1, 'VARCHAR(100)', 'V~O');
-        $certificationField = self::addField($module, $detailsBlock, 'estado_certificacion', 'Estado de certificación', 15, 'VARCHAR(50)', 'V~O');
-        self::ensurePicklistValues($certificationField, array('No aplica', 'Pendiente', 'En proceso', 'Aprobado', 'Rechazado'));
-        self::addField($module, $detailsBlock, 'fecha_certificacion', 'Fecha de certificación', 5, 'DATE', 'D~O');
+        self::hideObsoleteGeneralFields($module);
         self::addField($module, $notesBlock, 'observaciones', 'Observaciones', 21, 'TEXT', 'V~O');
 
         self::addField($module, $detailsBlock, 'notices_correo_configurado', 'NOTICES: Correo configurado', 56, 'INT(1)', 'C~O');
@@ -171,25 +225,38 @@ class ServiciosEstacionInstaller {
         self::ensurePicklistValues($iiseCertification, array('No aplica', 'Pendiente', 'En proceso', 'Aprobado', 'Rechazado'));
         self::addField($module, $detailsBlock, 'iise_credenciales_entregadas', 'IISE: Credenciales entregadas', 56, 'INT(1)', 'C~O');
 
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_payphone_estado_afiliacion', 'PAY FUELCONTROL-PAYPHONE: Estado de afiliación', 15, 'VARCHAR(50)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_estado_afiliacion', 'PAY FUELCONTROL-DATAFAST: Estado de afiliación', 15, 'VARCHAR(50)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_esquema_instalado', 'PAY FUELCONTROL-DATAFAST: Esquema instalado', 1, 'VARCHAR(100)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_version_equipos', 'PAY FUELCONTROL-DATAFAST: Versión de equipos', 1, 'VARCHAR(100)', 'V~O');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_payphone_estado_afiliacion', 'PAY FUELCONTROL-PAYPHONE: Estado de afiliación', 15, 'VARCHAR(50)', 'V~O', null, null, 'svc_pay_payphone_afiliacion');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_payphone_estado_afiliacion', 'svc_pay_payphone_afiliacion', 'VARCHAR(50)');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_estado_afiliacion', 'PAY FUELCONTROL-DATAFAST: Estado de afiliación', 15, 'VARCHAR(50)', 'V~O', null, null, 'svc_pay_datafast_afiliacion');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_datafast_estado_afiliacion', 'svc_pay_datafast_afiliacion', 'VARCHAR(50)');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_esquema_instalado', 'PAY FUELCONTROL-DATAFAST: Esquema instalado', 1, 'VARCHAR(100)', 'V~O', null, null, 'svc_pay_datafast_esquema');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_datafast_esquema_instalado', 'svc_pay_datafast_esquema', 'VARCHAR(100)');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_version_equipos', 'PAY FUELCONTROL-DATAFAST: Versión de equipos', 1, 'VARCHAR(100)', 'V~O', null, null, 'svc_pay_datafast_version');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_datafast_version_equipos', 'svc_pay_datafast_version', 'VARCHAR(100)');
         self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_mid', 'PAY FUELCONTROL-DATAFAST: MID', 1, 'VARCHAR(100)', 'V~O');
         self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_tid', 'PAY FUELCONTROL-DATAFAST: TID', 1, 'VARCHAR(100)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_estado_certificacion', 'PAY FUELCONTROL-DATAFAST: Estado de certificación', 15, 'VARCHAR(50)', 'V~O');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_datafast_estado_certificacion', 'PAY FUELCONTROL-DATAFAST: Estado de certificación', 15, 'VARCHAR(50)', 'V~O', null, null, 'svc_pay_datafast_certificacion');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_datafast_estado_certificacion', 'svc_pay_datafast_certificacion', 'VARCHAR(50)');
 
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_estado_afiliacion', 'PAY FUELCONTROL-MEDIANET: Estado de afiliación', 15, 'VARCHAR(50)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_esquema_instalado', 'PAY FUELCONTROL-MEDIANET: Esquema instalado', 1, 'VARCHAR(100)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_version_equipos', 'PAY FUELCONTROL-MEDIANET: Versión de equipos', 1, 'VARCHAR(100)', 'V~O');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_estado_afiliacion', 'PAY FUELCONTROL-MEDIANET: Estado de afiliación', 15, 'VARCHAR(50)', 'V~O', null, null, 'svc_pay_medianet_afiliacion');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_medianet_estado_afiliacion', 'svc_pay_medianet_afiliacion', 'VARCHAR(50)');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_esquema_instalado', 'PAY FUELCONTROL-MEDIANET: Esquema instalado', 1, 'VARCHAR(100)', 'V~O', null, null, 'svc_pay_medianet_esquema');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_medianet_esquema_instalado', 'svc_pay_medianet_esquema', 'VARCHAR(100)');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_version_equipos', 'PAY FUELCONTROL-MEDIANET: Versión de equipos', 1, 'VARCHAR(100)', 'V~O', null, null, 'svc_pay_medianet_version');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_medianet_version_equipos', 'svc_pay_medianet_version', 'VARCHAR(100)');
         self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_mid', 'PAY FUELCONTROL-MEDIANET: MID', 1, 'VARCHAR(100)', 'V~O');
         self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_tid', 'PAY FUELCONTROL-MEDIANET: TID', 1, 'VARCHAR(100)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_estado_certificacion', 'PAY FUELCONTROL-MEDIANET: Estado de certificación', 15, 'VARCHAR(50)', 'V~O');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_medianet_estado_certificacion', 'PAY FUELCONTROL-MEDIANET: Estado de certificación', 15, 'VARCHAR(50)', 'V~O', null, null, 'svc_pay_medianet_certificacion');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_medianet_estado_certificacion', 'svc_pay_medianet_certificacion', 'VARCHAR(50)');
 
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_deuna_esquema_instalado', 'PAY FUELCONTROL-DEUNA: Esquema instalado', 1, 'VARCHAR(100)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_deuna_cantidad_equipos', 'PAY FUELCONTROL-DEUNA: Cantidad de equipos', 7, 'INT(11)', 'I~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_deuna_version_equipos', 'PAY FUELCONTROL-DEUNA: Versión de equipos', 1, 'VARCHAR(100)', 'V~O');
-        self::addField($module, $detailsBlock, 'pay_fuelcontrol_deuna_puntos_venta', 'PAY FUELCONTROL-DEUNA: Puntos de venta', 7, 'INT(11)', 'I~O');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_deuna_esquema_instalado', 'PAY FUELCONTROL-DEUNA: Esquema instalado', 1, 'VARCHAR(100)', 'V~O', null, null, 'svc_pay_deuna_esquema');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_deuna_esquema_instalado', 'svc_pay_deuna_esquema', 'VARCHAR(100)');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_deuna_cantidad_equipos', 'PAY FUELCONTROL-DEUNA: Cantidad de equipos', 7, 'INT(11)', 'I~O', null, null, 'svc_pay_deuna_cantidad');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_deuna_cantidad_equipos', 'svc_pay_deuna_cantidad', 'INT(11)');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_deuna_version_equipos', 'PAY FUELCONTROL-DEUNA: Versión de equipos', 1, 'VARCHAR(100)', 'V~O', null, null, 'svc_pay_deuna_version');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_deuna_version_equipos', 'svc_pay_deuna_version', 'VARCHAR(100)');
+        self::addField($module, $detailsBlock, 'pay_fuelcontrol_deuna_puntos_venta', 'PAY FUELCONTROL-DEUNA: Puntos de venta', 7, 'INT(11)', 'I~O', null, null, 'svc_pay_deuna_puntos_venta');
+        self::ensurePhysicalColumnName($module, 'pay_fuelcontrol_deuna_puntos_venta', 'svc_pay_deuna_puntos_venta', 'INT(11)');
 
         self::addField($module, $detailsBlock, 'tunnel_webhook_aplicacion', 'TUNNEL-WEBHOOK: Aplicación que consume', 1, 'VARCHAR(100)', 'V~O');
         self::addField($module, $detailsBlock, 'tunnel_webhook_acceso_webhook', 'TUNNEL-WEBHOOK: Acceso Webhook', 56, 'INT(1)', 'C~O');
@@ -197,7 +264,8 @@ class ServiciosEstacionInstaller {
         self::addField($module, $detailsBlock, 'tunnel_api_rest_acceso_api', 'TUNNEL-API REST: Acceso API', 56, 'INT(1)', 'C~O');
 
         self::addField($module, $detailsBlock, 'arch_estado_proceso_permisos', 'ARCH: Estado del proceso de permisos', 15, 'VARCHAR(50)', 'V~O');
-        self::addField($module, $detailsBlock, 'vpn_connect_cantidad_vpn_activas', 'VPN CONNECT: Cantidad de VPN activas', 7, 'INT(11)', 'I~O');
+        self::addField($module, $detailsBlock, 'vpn_connect_cantidad_vpn_activas', 'VPN CONNECT: Cantidad de VPN activas', 7, 'INT(11)', 'I~O', null, null, 'svc_vpn_cantidad_activas');
+        self::ensurePhysicalColumnName($module, 'vpn_connect_cantidad_vpn_activas', 'svc_vpn_cantidad_activas', 'INT(11)');
         self::addField($module, $detailsBlock, 'vpn_connect_acceso_servidor', 'VPN CONNECT: Acceso al servidor', 56, 'INT(1)', 'C~O');
         self::addField($module, $detailsBlock, 'vpn_connect_acceso_clientes', 'VPN CONNECT: Acceso a clientes', 56, 'INT(1)', 'C~O');
 
@@ -248,9 +316,11 @@ class ServiciosEstacionInstaller {
 
         $catalogModule->initWebservice();
         self::ensureCatalogFields($catalogModule);
-        list($instanceModule) = self::ensureInstanceModule();
+        list($instanceModule, $accountField) = self::ensureInstanceModule();
 
         $accountsModule->unsetRelatedList($catalogModule, 'Servicios');
+        $accountsModule->unsetRelatedList($instanceModule, 'Servicios', 'get_dependents_list');
+        $accountsModule->setRelatedList($instanceModule, 'Servicios', array('ADD'), 'get_dependents_list', $accountField->id);
         ServiciosEstacionDuplicateHandler::register($catalogModule, $instanceModule);
         ServiciosEstacionDuplicateHandler::ensureCatalogRecords();
     }
