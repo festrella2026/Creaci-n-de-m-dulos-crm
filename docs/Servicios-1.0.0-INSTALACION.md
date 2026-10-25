@@ -63,6 +63,17 @@ No se recomienda utilizarlo como actualización en una instancia que ya tenga es
 6. Confirmar que **Identificador de instalación** no aparece en el formulario de alta y que, al abrir el registro guardado, se muestra como `Cuenta - Servicio`.
 7. Confirmar que el campo **Estado de instalación** solo ofrece `Instalado` y `No instalado`.
 
+## Agregar un servicio con campos específicos
+
+`Servicios` es el catálogo de tipos de servicio; las instalaciones asociadas a cuentas se guardan en `ServiciosEstacion`. Para agregar un servicio como `MAQUINARIA`:
+
+1. Crear el registro del servicio en **Ventas > Servicios**.
+2. Ir a **Configuración > Administración de módulos > Editor de diseño**, elegir `ServiciosEstacion` y agregar allí los campos personalizados. Los campos se guardan en el registro de instalación, no en el registro del catálogo.
+3. Si los campos deben mostrarse solo al elegir `MAQUINARIA`, solicitar una actualización de código para incluir sus nombres de campo en el mapa de visibilidad de `layouts/v7/modules/ServiciosEstacion/resources/Edit.js`. El Editor de diseño permite crear y ordenar campos, pero no configura por sí solo esta condición basada en el servicio relacionado.
+4. Agregar validaciones en el backend si el nuevo servicio tiene reglas de negocio, y probar creación, edición, cambio y limpieza del servicio.
+
+Un usuario con permisos puede crear el servicio en el catálogo y agregar campos desde el Editor de diseño, pero no puede vincularlos condicionalmente al servicio solo con la interfaz actual. Si se crea un módulo independiente de Vtiger, sus campos sí se configuran directamente en el Editor de diseño de ese módulo y no necesitan este mapa.
+
 ## Activar español mexicano en una instalación existente
 
 Este ZIP es de instalación limpia; no volver a importarlo como actualización en una instancia que ya tenga `Servicios` o `ServiciosEstacion`. Copiar solamente `languages/es_mx/Servicios.php` y `languages/es_mx/ServiciosEstacion.php` del ZIP a `languages/es_mx/` en el servidor, conservando permisos de lectura para el servidor web. Después cerrar sesión e iniciar sesión nuevamente con el idioma **Español mexicano**.

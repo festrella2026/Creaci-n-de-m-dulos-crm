@@ -28,6 +28,17 @@ Este paquete actualiza `Modulos` desde la versión 2.0.0 e instala `ModuloEstaci
 
 Estos campos son opcionales salvo que el negocio defina requisitos adicionales. Los campos compartidos por tipo quedan ocultos en el formulario al seleccionar otro tipo; los valores se conservan si el tipo cambia.
 
+## Agregar un tipo con campos específicos
+
+`Modulos` es el catálogo de tipos; los datos de cada asociación con una cuenta se guardan en `ModuloEstacion`. Para agregar un tipo como `MAQUINARIA`:
+
+1. Crear el registro del tipo en **Ventas > Modulos**.
+2. Ir a **Configuración > Administración de módulos > Editor de diseño**, elegir `ModuloEstacion` y agregar allí los campos personalizados.
+3. Si los campos deben mostrarse solo al elegir `MAQUINARIA`, solicitar una actualización de código para incluir sus nombres de campo en el mapa de visibilidad de `layouts/v7/modules/ModuloEstacion/resources/Edit.js`. El Editor de diseño permite crear y ordenar campos, pero no configura por sí solo esta condición basada en el registro relacionado.
+4. Agregar validaciones en el backend si el nuevo tipo tiene reglas de negocio, y probar creación, edición, cambio y limpieza del tipo.
+
+Un usuario con permisos puede crear el tipo en el catálogo y agregar campos desde el Editor de diseño, pero no puede vincularlos condicionalmente al tipo solo con la interfaz actual. Si `Maquinaria` fuera un módulo independiente de Vtiger, sus campos sí se configurarían directamente en el Editor de diseño de ese módulo y no necesitarían este mapa.
+
 ## Instalación
 
 1. Hacer backup completo de archivos y base de datos. Validar primero en staging.

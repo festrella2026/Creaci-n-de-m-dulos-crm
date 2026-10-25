@@ -46,3 +46,14 @@ Este paquete es para una instancia Vtiger CRM 8.4.x donde **todavía no existen*
 ## Catálogo inicial
 
 Los códigos generados son identificadores internos: `MOD-PUMP`, `MOD-PINPAD`, `MOD-TANK`, `MOD-LUBRICANTS`, `MOD-PROMOS`, `MOD-PRICE-TOTEM`, `MOD-FLEET-BUS`, `MOD-PRINTER`, `MOD-BARCODE`, `MOD-RFID-HF` y `MOD-AVI-RFID`. Se pueden ajustar desde el catálogo según la codificación corporativa.
+
+## Agregar un tipo con campos específicos
+
+`Modulos` es el catálogo de tipos; los datos de cada asociación con una cuenta se guardan en `ModuloEstacion`. Para agregar un tipo como `MAQUINARIA`:
+
+1. Crear el registro del tipo en **Ventas > Modulos**.
+2. Ir a **Configuración > Administración de módulos > Editor de diseño**, elegir `ModuloEstacion` y agregar allí los campos personalizados. Esos campos pertenecen al formulario de la instalación, no al registro del catálogo.
+3. Si los campos deben mostrarse solo al elegir `MAQUINARIA`, solicitar una actualización de código para incluir sus nombres de campo en el mapa de visibilidad de `layouts/v7/modules/ModuloEstacion/resources/Edit.js`. El Editor de diseño permite crear y ordenar campos, pero no configura por sí solo esta condición basada en el registro relacionado.
+4. Si el tipo requiere reglas de negocio, por ejemplo rangos permitidos u obligatoriedad condicional, agregar también validación en el backend y probar creación, edición, cambio y limpieza del tipo.
+
+Un usuario con permisos puede crear el tipo en el catálogo y agregar campos desde el Editor de diseño, pero no puede vincularlos condicionalmente al tipo solo con la interfaz actual. Si `Maquinaria` fuera un módulo independiente de Vtiger, sus campos sí se configurarían directamente en el Editor de diseño de ese módulo y no necesitarían este mapa.
