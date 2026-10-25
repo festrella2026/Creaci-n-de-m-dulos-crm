@@ -1,6 +1,6 @@
 <?php
 $languageStrings = array(
-    'Servicios' => 'Servicios',
+    'Servicios' => 'Portafolio Servicios',
     'SINGLE_Servicios' => 'Servicio',
     'LBL_SERVICIOS_INFORMATION' => 'Información del servicio',
     'servicios_name' => 'Nombre',

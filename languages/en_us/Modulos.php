@@ -1,6 +1,6 @@
 <?php
 $languageStrings = array(
-	'Modulos' => 'Modules',
+	'Modulos' => 'Portafolio Módulos',
 	'SINGLE_Modulos' => 'Module',
 	'LBL_ADD_RECORD' => 'Add Module',
 	'LBL_RECORDS_LIST' => 'Module Catalog',
